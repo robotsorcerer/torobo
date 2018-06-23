@@ -14,43 +14,26 @@
 
 std::string saved_npy_path = "/home/olalekan/Documents/LyapunovLearner/ToroboTakahashi/data/state_joint.npy";
 std::string saved_txt_path = "/home/olalekan/Documents/LyapunovLearner/ToroboTakahashi/data/state_joint.csv";
-//std_msgs::Float64* np_data;
-//std::vector<double> np_data;
-/*
-cnpy::NpyArray get_joints(const std::string& saved_npy_path){
-  cnpy::NpyArray joints_data = cnpy::npy_load(saved_npy_path);
-  ROS_INFO_STREAM("saved array shape: " << joints_data.shape[0] << ", " << joints_data.shape[1]);
-  ROS_INFO_STREAM("saved array size: " << joints_data.shape.size());
-  ROS_INFO_STREAM("saved array word size: " << joints_data.word_size);
 
-  auto joint_values =joints_data.data<std::vector<double>>();
-  ROS_INFO_STREAM("joint_values " << joint_values);
-  for (auto it = joint_values->cbegin(); it != joint_values->cend(); ++it)
-    ROS_INFO_STREAM("joint_values " << *it);
 
-  return joints_data;
-}
-*/
-std::string read_data(const std::string& saved_txt_path){
+std::vector<std::string> read_data(const std::string& saved_txt_path){
    std::ifstream file_stream(saved_txt_path);
    if(!file_stream.is_open())
       ROS_FATAL("Could not open file");
-   std::string str;
    std::vector<std::string> arr;
-   std::string file_contents;
 
-   while(!filestream.eof())
+   while(!file_stream.eof())
    {
         for (std::string joints; file_stream.getline(&joints[0], 1000, '\n'); ) {
             arr.push_back(joints);
         }
    }
-   for(auto joints : arr):
+   for(auto joints : arr)
       ROS_INFO_STREAM( joints);
    return arr;
  }
 
-void convert(const std_msgs::Float64& saved_joints,  double timeout)
+void convert(const std::vector<std::string>& saved_joints,  double timeout)
 {
   double eps = 1e-5;
   double num_waypts = 10001; //sizeof(saved_joints)/sizeof(saved_joints[0]); //[0];
@@ -105,41 +88,18 @@ void convert(const std_msgs::Float64& saved_joints,  double timeout)
 
   }
 
-bool joints(trac_ik_torobo::Joints::Request &req,
-            trac_ik_torobo::Joints::Response &res)
-{
-  //np_data->data = res.joints;
-  np_data.push_back(res.joints);
-  // ROS_INFO_STREAM("res: " << res.joints);
-
-  return true;
-}
-
 
 int main(int argc, char** argv)
 {
-  srand(1);
+
   ros::init(argc, argv, "ik_torobo");
   ros::NodeHandle nh("~");
 
-  // ros::ServiceServer server = nh.advertiseService("/torobo/teach_joints", joints);
-  //nh.serviceClient client ;
-  //client = nh.serviceClient<trac_ik_torobo::Joints>("/torobo/teach_joints");
-  //trac_ik_torobo::Joints srv;
-  //ros::service::call("/torobo/teach_joints", srv);
-
-  //client.call(srv);
-
+  auto saved_joints = read_data(saved_txt_path);
 
   int num_waypts;
   double timeout;
-
-  //auto saved_joints = srv.response;
-  //ROS_INFO_STREAM("saved_joints: " << saved_joints );
- ß auto saved_joints = read_data(saved_txt_path);
-
-
-  convert(saved_joints, timeout);
+  //convert(saved_joints, timeout);
 
   ros::spin();
 
