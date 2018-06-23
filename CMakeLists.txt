@@ -11,6 +11,12 @@ find_package(catkin REQUIRED
     rospy_tutorials
 )
 
+find_package(PkgConfig)
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
+
+add_definitions(${EIGEN_DEFINITIONS})
+
 find_package(Boost REQUIRED COMPONENTS date_time)
 find_package(orocos_kdl REQUIRED)
 
@@ -34,6 +40,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${orocos_kdl_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 macro(add_exec name)
@@ -49,7 +56,7 @@ endmacro()
 
 add_exec(ik_torobo)
 add_exec(teach_jnt_to_cart)
-#add_exec(ik_sub)
+add_exec(ik_sub)
 
 install(DIRECTORY launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

@@ -1,11 +1,17 @@
 #include <unistd.h>
 #include <iostream>
 #include <array>
+#include <chrono>
+#include <thread>
 #include <boost/date_time.hpp>
 #include <trac_ik/trac_ik.hpp>
 #include <ros/ros.h>
 #include <kdl/chainiksolverpos_nr_jl.hpp>
 #include <std_msgs/Float32.h>
+
+#include <Eigen/Core>
+using namespace Eigen;
+
 #include <rospy_tutorials/Floats.h>
 
 rospy_tutorials::Floats np_msg_data;
@@ -18,11 +24,12 @@ void joints_cb(const rospy_tutorials::Floats::ConstPtr& np_msg)
   ROS_INFO("size: [%d]", np_msg->data.size());
     for (int i=0; i < np_msg->data.size(); ++i)
     {
-      for (auto j =0; j < 8; ++j)
-      {
-        jointsarray[i].push_back(np_msg->data[j]);
-      }
-      //std::cout << np_msg->data[i] << ', ';
+      // for (auto j =0; j < 8; ++j)
+      // {
+      //   jointsarray[i].push_back(np_msg->data[j]);
+      // }
+      std::cout << np_msg->data[i] << "\n";
+      std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     }
    //ROS_INFO("numpy message : [%s]" << np_msg->data.c_str());
 }

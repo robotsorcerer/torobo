@@ -11,26 +11,38 @@
 #include <trac_ik_torobo/Joints.h>
 #include <std_msgs/Float64.h>
 
-
-std::string saved_npy_path = "/home/olalekan/Documents/LyapunovLearner/ToroboTakahashi/data/state_joint.npy";
-std::string saved_txt_path = "/home/olalekan/Documents/LyapunovLearner/ToroboTakahashi/data/state_joint.csv";
+std::string saved_txt_path = "/home/olalekan/Documents/LyapunovLearner/ToroboTakahashi/data/state_joint_pos_only.csv";
 
 
-std::vector<std::string> read_data(const std::string& saved_txt_path){
-   std::ifstream file_stream(saved_txt_path);
-   if(!file_stream.is_open())
+std::vector<char> read_data(const std::string& saved_txt_path)
+{
+   std::ifstream file_stream(saved_txt_path, std::ios::binary);
+   std::vector<char> arr;
+   if(!file_stream.is_open()){
       ROS_FATAL("Could not open file");
-   std::vector<std::string> arr;
-
-   while(!file_stream.eof())
+    }
+   else
    {
-        for (std::string joints; file_stream.getline(&joints[0], 1000, '\n'); ) {
+      auto size = file_stream.tellg();
+      // std::string str(size, '\0');
+      // file_stream.seekg(0);
+      //
+      // if(file_stream.read(&str[0], size))
+      //   arr.push_back(str);
+      // }
+      while(!file_stream.eof())
+      {
+        ROS_INFO("in here");
+        for (char joints; file_stream.getline(&joints, 1000); ) {
+          ROS_INFO("and here");
             arr.push_back(joints);
+            std::cout << "joints: " << joints << std::endl;
         }
-   }
-   for(auto joints : arr)
-      ROS_INFO_STREAM( joints);
-   return arr;
+        //std::getline(file_stream, joints);
+      }
+      return arr;
+    }
+    file_stream.close();
  }
 
 void convert(const std::vector<std::string>& saved_joints,  double timeout)
@@ -96,6 +108,9 @@ int main(int argc, char** argv)
   ros::NodeHandle nh("~");
 
   auto saved_joints = read_data(saved_txt_path);
+
+  for(auto joints : saved_joints)
+     ROS_INFO_STREAM(joints);
 
   int num_waypts;
   double timeout;
