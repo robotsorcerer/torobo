@@ -20,7 +20,6 @@ Eigen::MatrixXd RawJoints(10001, 7);
 
 void joints_cb(const rospy_tutorials::Floats::ConstPtr& np_msg)
 {
-    //ros::Rate r(30);
     ROS_INFO_STREAM("numpy message : " << np_msg->data.size());
     RawJoints.resize(10001, 7);
     for (int i=0; i < 10001; ++i)
@@ -29,18 +28,14 @@ void joints_cb(const rospy_tutorials::Floats::ConstPtr& np_msg)
       {
         RawJoints(i, j) = np_msg->data[i*7+j];
       }
-      //std::cout << np_msg->data[i] << "\n";
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //  std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    //r.sleep();
 }
 
-void convert(const std_msgs::Float32& saved_joints,  double timeout)
+std::vector<KDL::Frame>  convert(Eigen::MatrixXd&& saved_joints)
 {
   double eps = 1e-5;
-  double num_waypts = 10001; //sizeof(saved_joints)/sizeof(saved_joints[0]); //[0];
-  ROS_INFO_STREAM("num_waypts: " << num_waypts);
-  // std::cout << "saved_joints" << saved_joints << "\n";
+  double num_waypts = saved_joints.rows();
 
 
   if (num_waypts < 1)
@@ -55,61 +50,55 @@ void convert(const std_msgs::Float32& saved_joints,  double timeout)
   KDL::ChainIkSolverPos_NR_JL kdl_solver(chain,ll,ul,fk_solver, vik_solver, 1, eps); // Joint Limit Solver
 
   // populate
-  std::vector<KDL::JntArray> JointList;
+  int num_jts = 7;
+  KDL::JntArray q(num_jts);
+  bool kinematics_status;
   std::vector<KDL::Frame> CartPosList;
-  KDL::JntArray q(chain.getNrOfJoints());
-/*
-  for(int rows=0; rows< saved_joints.shape[0]; ++rows){
-    KDL::Frame cartpos;
-    for (int cols=1; cols< 8; ++cols){
-      // q(cols)=saved_joints(rows)(cols);
+
+  KDL::Frame cartpos;
+  for (auto i=0; i < num_waypts; i++) {
+    for (uint j=0; j<7; j++) {  // positions go from indices 1 through 8
+      q(j)=saved_joints(i, j);
     }
-    // ROS_INFO_STREAM("q: " << q );
-  }
-  */
-  // for (uint i=0; i < num_waypts; i++) {
-  //   KDL::Frame cartpos;
-  //   for (uint j=1; j<8; j++) {  // positions go from indices 1 through 8
-  //     q(j)=saved_joints[i][j];
-  //   }
-  //   bool kinematics_status;
-  //   kinematics_status = fk_solver.JntToCart(JointList[i], cartpos);
-  //   if(kinematics_status>=0){
-  //       std::cout << cartpos.p.x() << cartpos.p.y() << cartpos.p.z()<<std::endl;
-  //       ROS_INFO("%s \n","KDL FK Succeeded!");
-  //       CartPosList.push_back(cartpos);
-  //   }
-  //   else{
-  //       printf("%s \n","Error: could not calculate forward kinematics :(");
-  //     }
-  //   JointList.push_back(q);
-  // }
 
-  ROS_INFO_STREAM("Joint List size  " << JointList.size());
+    kinematics_status = fk_solver.JntToCart(q, cartpos);
+    if(kinematics_status>=0){
+        // std::cout << cartpos.p.x() << cartpos.p.y() << cartpos.p.z()<<std::endl;
+        // ROS_INFO("%s \n","KDL FK Succeeded!");
+        CartPosList.push_back(cartpos);
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    else{
+        ROS_INFO("%s \n","Error: could not calculate forward kinematics :(");
+      }
+  }
     ROS_INFO_STREAM("Cart List size  " << CartPosList.size());
-
+    return CartPosList;
   }
-
-
 
 int main(int argc, char** argv)
 {
-  srand(1);
   ros::init(argc, argv, "ik_torobo");
   ros::NodeHandle nh("~");
 
   ros::Subscriber sub = nh.subscribe("/torobo/teach_joints", 1000, joints_cb);
 
   double timeout;
-  //ROS_INFO_STREAM("numpy message : " << np_msg_data.data);
-  //convert(saved_joints, timeout);
-  //for(auto it=jointsarray.cbegin(); it!=jointsarray.cend(); ++it)
-  //{
-  //  std::cout<<" " << *it << "\n";
-  //}
-  ROS_INFO_STREAM("Raw Joints: " << RawJoints);
+  std::vector<KDL::Frame> CartPosList = convert(std::move(RawJoints)); //, std::move(CartPosList));
 
-  ros::spin();
+  ros::spinOnce();
 
+
+  std::cout << std::fixed;
+  std::cout << std::setprecision(4);
+  std::cout << "Raw Joints first 10:\n " << RawJoints.block(0, 0, 10, 7) << "\n";
+
+  if (!ros::ok()){
+    ros::shutdown();
+  }
+  // for(auto it = CartPosList.cbegin(); it != CartPosList.cend(); ++it)
+  // {
+  //   ROS_INFO("[x, y, z]: [%.4f, %.4f, %.4f]", it->p.x(), it->p.y(), it->p.z());
+  // }
   return 0;
 }
