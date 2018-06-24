@@ -10,28 +10,29 @@
 #include <std_msgs/Float32.h>
 
 #include <Eigen/Core>
-using namespace Eigen;
 
 #include <rospy_tutorials/Floats.h>
 
 rospy_tutorials::Floats np_msg_data;
 
 std::vector<std::vector<double>> jointsarray;
+Eigen::MatrixXd RawJoints(10001, 7);
 
 void joints_cb(const rospy_tutorials::Floats::ConstPtr& np_msg)
 {
-  //np_msg_data = np_msg;
-  ROS_INFO("size: [%d]", np_msg->data.size());
-    for (int i=0; i < np_msg->data.size(); ++i)
+    //ros::Rate r(30);
+    ROS_INFO_STREAM("numpy message : " << np_msg->data.size());
+    RawJoints.resize(10001, 7);
+    for (int i=0; i < 10001; ++i)
     {
-      // for (auto j =0; j < 8; ++j)
-      // {
-      //   jointsarray[i].push_back(np_msg->data[j]);
-      // }
-      std::cout << np_msg->data[i] << "\n";
-      std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+      for (auto j =0; j < 7; ++j)
+      {
+        RawJoints(i, j) = np_msg->data[i*7+j];
+      }
+      //std::cout << np_msg->data[i] << "\n";
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-   //ROS_INFO("numpy message : [%s]" << np_msg->data.c_str());
+    //r.sleep();
 }
 
 void convert(const std_msgs::Float32& saved_joints,  double timeout)
@@ -106,6 +107,7 @@ int main(int argc, char** argv)
   //{
   //  std::cout<<" " << *it << "\n";
   //}
+  ROS_INFO_STREAM("Raw Joints: " << RawJoints);
 
   ros::spin();
 
