@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(trac_ik_torobo)
 
-add_compile_options(-std=c++14)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+set(CMAKE_CXX_EXTENSIONS off)
+add_compile_options(-Wall -Wextra -Wpedantic)
 
 find_package(catkin REQUIRED
   COMPONENTS
@@ -9,6 +12,8 @@ find_package(catkin REQUIRED
     std_msgs
     message_generation
     rospy_tutorials
+    kdl_parser
+    dr_kdl
 )
 
 find_package(PkgConfig)
@@ -20,7 +25,7 @@ add_definitions(${EIGEN_DEFINITIONS})
 find_package(Boost REQUIRED COMPONENTS date_time)
 find_package(orocos_kdl REQUIRED)
 
-
+add_message_files(FILES Numpy64.msg)
 add_service_files(FILES Joints.srv)
 
 generate_messages(
@@ -30,7 +35,7 @@ generate_messages(
 
 catkin_package(
   CATKIN_DEPENDS
-    trac_ik_lib std_msgs message_runtime rospy_tutorials
+    trac_ik_lib std_msgs message_runtime
   DEPENDS
     Boost
     orocos_kdl
@@ -46,7 +51,8 @@ include_directories(
 macro(add_exec name)
   add_executable(${name} src/${name}.cpp)
   target_link_libraries(${name} ${catkin_LIBRARIES} ${Boost_LIBRARIES}
-	 											${orocos_kdl_LIBRARIES} cnpy -lm -ldl)
+                        ${EIGEN3_LIBRARIES} ${orocos_kdl_LIBRARIES}
+                        -lm -ldl)
 	install(TARGETS ${name}
 	  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
