@@ -20,19 +20,6 @@
 
 using namespace boost::filesystem;
 
-// // use this to concatenate two containers as a boost zip
-// //https://stackoverflow.com/questions/12552277/whats-the-best-way-to-iterate-over-two-or-more-containers-simultaneously
-// template<class... Conts>
-// auto zip_range(Conts&... conts)
-//   -> decltype(boost::make_iterator_range(
-//   boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
-//   boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
-// {
-//   return {boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
-//           boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
-// }
-
-
 class Converter{
 
   public:
@@ -241,7 +228,7 @@ private:
                       vel[0], vel[1], vel[2]  );
           }
           cartPosFile << itPos->p.x() << ", " << itPos->p.y() << ", " <<  itPos->p.z() <<
-                       vel[0] << ", " << vel[1] << ", " << vel[2] << "\n";
+                      ", " << vel[0] << ", " << vel[1] << ", " << vel[2] << "\n";
 
            ++itPos;
            ++itVel;
