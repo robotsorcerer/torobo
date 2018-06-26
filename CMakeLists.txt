@@ -22,7 +22,7 @@ include_directories( ${EIGEN3_INCLUDE_DIRS} )
 
 add_definitions(${EIGEN_DEFINITIONS})
 
-find_package(Boost REQUIRED COMPONENTS date_time)
+find_package(Boost REQUIRED COMPONENTS date_time filesystem system)
 find_package(orocos_kdl REQUIRED)
 
 add_message_files(FILES Numpy64.msg)
@@ -52,6 +52,7 @@ macro(add_exec name)
   add_executable(${name} src/${name}.cpp)
   target_link_libraries(${name} ${catkin_LIBRARIES} ${Boost_LIBRARIES}
                         ${EIGEN3_LIBRARIES} ${orocos_kdl_LIBRARIES}
+                        ${Boost_FILESYSTEM_LIBRARY}
                         -lm -ldl)
 	install(TARGETS ${name}
 	  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

@@ -18,7 +18,8 @@ def talker(data):
 
 if __name__ == '__main__':
     filepath = join(expanduser('~'), 'Documents', 'LyapunovLearner', 'ToroboTakahashi', 'data')
-    name     = 'state_joint_pos_only.npy'
+    name     = 'state_joint.npy'
+    #name     = 'state_joint_pos_only.npy'
     filename = join(filepath, name)
     data_raw = np.load(filename)
     print(data_raw.shape)

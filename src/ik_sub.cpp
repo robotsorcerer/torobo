@@ -15,6 +15,22 @@
 #include <Eigen/Core>
 #include <mutex>
 #include <trac_ik_torobo/Numpy64.h>
+#include <boost/filesystem.hpp>
+
+
+using namespace boost::filesystem;
+
+// // use this to concatenate two containers as a boost zip
+// //https://stackoverflow.com/questions/12552277/whats-the-best-way-to-iterate-over-two-or-more-containers-simultaneously
+// template<class... Conts>
+// auto zip_range(Conts&... conts)
+//   -> decltype(boost::make_iterator_range(
+//   boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+//   boost::make_zip_iterator(boost::make_tuple(conts.end()...))))
+// {
+//   return {boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
+//           boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
+// }
 
 
 class Converter{
@@ -25,7 +41,7 @@ class Converter{
       save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
       cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0), disp(true)
       {
-              sub = nh_.subscribe("/torobo/teach_joints", 1, &Converter::joints_cb, this);
+          sub = nh_.subscribe("/torobo/teach_joints", 1, &Converter::joints_cb, this);
       }
 
       ~Converter() { }
@@ -43,7 +59,6 @@ private:
     ros::NodeHandle nh_;
     ros::Subscriber sub;
     std::vector<std::thread> threads;
-    std::vector<KDL::Frame> CartPosList;
     std::vector<std::vector<double>> jointsarray;
     Eigen::MatrixXd RawJoints;
     unsigned long const hardware_concurrency;
@@ -56,6 +71,9 @@ private:
     const std::string urdf;
     KDL::Tree kdl_tree;
     bool disp;
+    std::vector<KDL::Frame> CartPosList;
+    std::vector<Eigen::Vector3d> CartVelList;
+    std::vector<double> TimeIdx;
 
 
 private:
@@ -84,7 +102,8 @@ private:
     void joints_cb(const trac_ik_torobo::Numpy64::ConstPtr& np_msg)
     {
         Eigen::MatrixXd RawJoints;
-        // rows = np_msg->data.size();
+        // raw joints contain the indices of time as well as the seven joint angles
+        // per time during the teaching motion
         this->RawJoints.resize(rows, cols);
 
         RawJoints.resize(rows, cols);
@@ -92,10 +111,11 @@ private:
         {
           for (auto j =0; j < cols; ++j)  // get only joint positions
           {
-            RawJoints(i, j) = np_msg->data[i*cols+j];
+            RawJoints(i, j) = np_msg->data[i*cols+j+1];
           }
+          TimeIdx.push_back(np_msg->data[i*cols]);
         }
-        if( disp)
+        if(disp)
           ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, 10, 7));
         std::lock_guard<std::mutex> lock(mutex);
         this->RawJoints = RawJoints;
@@ -121,11 +141,15 @@ private:
           int cols = saved_joints.cols();
           updateJoints = false;
 
-          read_cart(saved_joints);
+          calculate_pos(saved_joints);
+          calculate_vel();
+          save_cart_data();
+          ROS_INFO("Shutting down ros");
+          ros::shutdown();
         }
       }
 
-    void read_cart(Eigen::MatrixXd const& saved_joints)
+    void calculate_pos(Eigen::MatrixXd const& saved_joints)
     {
           KDL::Chain chain;
           KDL::Tree kdl_tree = get_kdl_tree();
@@ -133,14 +157,13 @@ private:
 
           // Set up KDL IK
           KDL::ChainFkSolverPos_recursive fk_solver = KDL::ChainFkSolverPos_recursive(chain); // Forward kin. solver
-          // KDL::ChainIkSolverVel_pinv vik_solver(chain); // PseudoInverse vel solver
+          //KDL::ChainIkSolverVel_pinv vik_solver     = KDL::ChainIkSolverVel_pinv(chain); // PseudoInverse vel solver
           // KDL::ChainIkSolverPos_NR_JL kdl_solver(chain,ll,ul,fk_solver, vik_solver, 1, eps); // Joint Limit Solver
 
           double elapsed = 0;
           KDL::Frame cartpos;
           bool kinematics_status = false;
           double timeout = 0.005;
-          std::vector<KDL::Frame> CartPosList;
           unsigned int num_jts = chain.getNrOfJoints();
 
           boost::posix_time::ptime start_time;
@@ -160,31 +183,87 @@ private:
 
               start_time = boost::posix_time::microsec_clock::local_time();
 
-              // do{
-                  kinematics_status = fk_solver.JntToCart(q, cartpos);
-                  diff = boost::posix_time::microsec_clock::local_time() - start_time;
-                  elapsed = diff.total_nanoseconds() / 1e9;
-                  ROS_INFO("kinematics_status: %d" , kinematics_status);
-                // } while((kinematics_status == true) && (elapsed < timeout));
-              CartPosList.push_back(cartpos);
+              kinematics_status = fk_solver.JntToCart(q, cartpos);
+              diff = boost::posix_time::microsec_clock::local_time() - start_time;
+              elapsed = diff.total_nanoseconds() / 1e9;
+
+              this->CartPosList.push_back(cartpos);
           }
-
-          print_out(CartPosList);
-          ROS_INFO("Shutting down ros");
-          ros::shutdown();
       }
 
-    void print_out(const std::vector<KDL::Frame>& CartPosList)
+    void calculate_vel()
     {
-      for(auto it = CartPosList.cbegin(); it != CartPosList.cend()+20; ++it)
-      {
-        if(disp)
+        std::vector<KDL::Frame> CartPosList = this->CartPosList;
+        std::vector<Eigen::Vector3d> CartVelList;
+        double xdot, ydot, zdot;
+
+        int idx = 0;
+        Eigen::Vector3d CartVel;
+        for(auto it = CartPosList.cbegin(); it != CartPosList.cend()-1; ++it)
         {
-          ROS_INFO("[x, y, z]: [%.4f, %.4f, %.4f]", it->p.x(), it->p.y(), it->p.z());
+            if(TimeIdx[idx]==0)
+            {
+              xdot = ydot = zdot = 0.0;
+            }
+            else
+            {
+              xdot = ((it+1)->p.x() - it->p.x() ) / TimeIdx[idx];
+              ydot = ((it+1)->p.y() - it->p.y() ) / TimeIdx[idx];
+              zdot = ((it+1)->p.z() - it->p.z() ) / TimeIdx[idx];
+            }
+
+            CartVel << xdot, ydot, zdot;
+            CartVelList.push_back(CartVel);
+            ++idx;
         }
-        cartPosFile << it->p.x() << ", " << it->p.y() << ", " <<  it->p.z() << "\n";
+        auto it = CartPosList.cend();
+        // append the last element
+        CartVelList.back() <<  it->p.x(), it->p.y(), it->p.z();  // should be zero anyway
+        this->CartVelList  = CartVelList;
+    }
+
+    void save_cart_data()
+    {
+      // check_file_exists();
+      std::vector<KDL::Frame> CartPosList = this->CartPosList;
+      std::vector<Eigen::Vector3d> CartVelList = this->CartVelList;
+
+      auto itPos = CartPosList.begin();
+      auto itVel = CartVelList.begin();
+
+      while(itPos != CartPosList.end() && itVel != CartVelList.end())
+      {
+          Eigen::Vector3d vel = *itVel;
+          if(disp)
+          {
+            ROS_INFO("[x, y, z, xd, yd, zd]: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f]", \
+                      itPos->p.x(), itPos->p.y(), itPos->p.z(),
+                      vel[0], vel[1], vel[2]  );
+          }
+          cartPosFile << itPos->p.x() << ", " << itPos->p.y() << ", " <<  itPos->p.z() <<
+                       vel[0] << ", " << vel[1] << ", " << vel[2] << "\n";
+
+           ++itPos;
+           ++itVel;
       }
-      std::cout << "system data collection done" << std::endl;
+    }
+
+    bool check_file_exists()
+    {
+        path p(save_path);
+        if(exists(p))
+        {
+          if(is_regular_file(p))
+          {
+            boost::filesystem::remove(save_path);
+          }
+          return true;
+        }
+        else
+        {
+          boost::filesystem::ofstream(save_path);  // create the empty file
+          return false;
+        }
     }
 };
 
