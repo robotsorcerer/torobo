@@ -10,39 +10,25 @@
 #include <trac_ik/trac_ik.hpp>
 #include "dr_kdl/dr_kdl.hpp"
 #include <kdl_parser/kdl_parser.hpp>
-#include <kdl/chainiksolverpos_nr_jl.hpp>
 
-#include <Eigen/Core>
 #include <mutex>
+#include <Eigen/Core>
+#include <trac_ik_torobo/ik_solver.h>
 #include <trac_ik_torobo/Numpy64.h>
 #include <boost/filesystem.hpp>
 
+// ik headers
+#include <std_msgs/Float64.h>
+#include <sensor_msgs/JointState.h>
+#include <kdl/chainiksolvervel_pinv.hpp>
+#include <kdl/chainiksolverpos_nr_jl.hpp>
+#include <trac_ik_torobo/SolveDiffIK.h>
 
 using namespace boost::filesystem;
+using namespace pfn;
 
 class Converter{
-
-  public:
-      Converter(ros::NodeHandle nh)
-      :nh_(nh), hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
-      save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
-      cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0), disp(true)
-      {
-          sub = nh_.subscribe("/torobo/teach_joints", 1, &Converter::joints_cb, this);
-      }
-
-      ~Converter() { }
-
-      Converter(Converter const&)=delete;
-      Converter& operator=(Converter const&) = delete;
-
-      void spawn()
-      {
-        begin();
-        end();
-      }
-
-private:
+  private:
     ros::NodeHandle nh_;
     ros::Subscriber sub;
     std::vector<std::thread> threads;
@@ -57,11 +43,56 @@ private:
     std::mutex mutex;
     const std::string urdf;
     KDL::Tree kdl_tree;
-    bool disp;
+    bool disp, saved, save_to_file;
     std::vector<KDL::Frame> CartPosList;
     std::vector<Eigen::Vector3d> CartVelList;
     std::vector<double> TimeIdx;
 
+    // IK Solver Members
+    // friend class IKVelocitySolver; //friend class forward declaration
+    std::unique_ptr<KDL::Chain> chain;
+    std::unique_ptr<KDL::ChainFkSolverPos_recursive> fk_solver;
+    std::unique_ptr<KDL::ChainIkSolverVel_pinv> vik_solver;
+    /// Inverse differential kinematics solver.
+    std::unique_ptr<KDL::ChainIkSolverVel_pinv> solver_;
+    /// Service server.
+    ros::ServiceServer diff_ik_server_;
+    ros::Publisher ik_pub_;
+    ros::ServiceClient ik_client;
+    std::string base_link, tip_link;
+
+  public:
+      Converter()
+      :hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
+      save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
+      cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0)
+      {
+          base_link = nh_.getParam("chain_start", base_link);
+          tip_link = nh_.getParam("chain_end", tip_link);
+
+          get_kdl_tree();
+          fk_solver      = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
+          vik_solver     = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get()); // PseudoInverse vel solver
+          // KDL::ChainIkSolverPos_NR_JL kdl_solver(chain,ll,ul,fk_solver, vik_solver, 1, eps); // Joint Limit Solver
+          sub               = nh_.subscribe("/torobo/teach_joints", 10, &Converter::joints_cb, this);
+          diff_ik_server_   = nh_.advertiseService("/torobo/solve_diff_ik", &Converter::onSolveRequest, this);
+          ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo/ik_results", 100, false);
+          ik_client         = nh_.serviceClient<trac_ik_torobo::SolveDiffIK>("/torobo/solve_diff_ik");
+          nh_.getParam("save_to_file", save_to_file);
+          nh_.getParam("disp", disp);
+          nh_.getParam("saved", saved);
+      }
+
+      ~Converter() { }
+
+      Converter(Converter const&)=delete;
+      Converter& operator=(Converter const&) = delete;
+
+      void spawn()
+      {
+        begin();
+        end();
+      }
 
 private:
       void begin()
@@ -69,6 +100,7 @@ private:
         if(spinner.canStart())
         {
           spinner.start();
+          running = true;
           ROS_INFO("spinning with %lu threads", hardware_concurrency/6);
         }
 
@@ -78,13 +110,57 @@ private:
         }
 
         threads.push_back(std::thread(&Converter::convert, this));
+        threads.push_back(std::thread(&Converter::getIK, this));
       	std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
       }
 
       void end()
       {
         spinner.stop();
+        running = false;
       }
+
+      KDL::Tree get_kdl_tree()
+      {
+        KDL::Chain chain;
+        KDL::Tree kdl_tree = dr::KdlTree::fromParameter("/robot_description");
+        kdl_tree.getChain(base_link, tip_link, chain);
+        this->chain = std::make_unique<KDL::Chain>(chain);
+        this->kdl_tree = kdl_tree;
+        return kdl_tree;
+      }
+
+    bool onSolveRequest(trac_ik_torobo::SolveDiffIK::Request & req, trac_ik_torobo::SolveDiffIK::Response & res)
+    {
+    		KDL::JntArray q_in(7);
+    		KDL::JntArray q_out(7);
+    		KDL::Vector rot, trans;
+
+    		trans.x(req.desired_vel.linear.x);
+    		trans.y(req.desired_vel.linear.y);
+    		trans.z(req.desired_vel.linear.z);
+    		rot.x(req.desired_vel.angular.x);
+    		rot.y(req.desired_vel.angular.y);
+    		rot.z(req.desired_vel.angular.z);
+
+    		KDL::Twist desired_vel{trans, rot};
+    		for (size_t i = 0; i < req.q_in.size(); i++) {
+    			q_in(i) = req.q_in.at(i);
+    		}
+
+    		vik_solver->CartToJnt(q_in, desired_vel, q_out);
+    		res.q_out.resize(q_out.rows());
+    		for (size_t i = 0; i < res.q_out.size(); i++) {
+    			res.q_out.at(i) = q_out(i);
+    		}
+
+    		sensor_msgs::JointState result_state;
+    		result_state.header.stamp = ros::Time::now();
+    		result_state.velocity = res.q_out;
+    		ik_pub_.publish(result_state);
+
+    		return !res.q_out.empty();
+     }
 
     void joints_cb(const trac_ik_torobo::Numpy64::ConstPtr& np_msg)
     {
@@ -102,56 +178,57 @@ private:
           }
           TimeIdx.push_back(np_msg->data[i*cols]);
         }
+
         if(disp)
+        {
           ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, 10, 7));
+        }
+
         std::lock_guard<std::mutex> lock(mutex);
         this->RawJoints = RawJoints;
         updateJoints = true;
     }
 
-    KDL::Tree get_kdl_tree()
-    {
-      KDL::Tree kdl_tree = dr::KdlTree::fromParameter("/robot_description");
-      this->kdl_tree = kdl_tree;
-      return kdl_tree;
-    }
-
     void convert()
     {
       Eigen::MatrixXd saved_joints;
-      // saved_joints.resize(rows, cols);
 
-      if (updateJoints)
-      {
-          std::lock_guard<std::mutex> lock(mutex);
-          saved_joints = this->RawJoints;
-          int cols = saved_joints.cols();
-          updateJoints = false;
+      // for(; running && ros::ok() ;)
+      // {
+          if (updateJoints)
+          {
+            std::lock_guard<std::mutex> lock(mutex);
+            saved_joints = this->RawJoints;
+            int cols = saved_joints.cols();
 
-          calculate_pos(saved_joints);
-          calculate_vel();
-          save_cart_data();
-          ROS_INFO("Shutting down ros");
-          ros::shutdown();
-        }
-      }
+            calculate_pos(saved_joints);
+            calculate_vel();
+            if(save_to_file)
+            {
+              if(!saved)
+              {
+                save_cart_data();
+              }
+            }
+              updateJoints = false;
+          }
+      // }
+    }
 
     void calculate_pos(Eigen::MatrixXd const& saved_joints)
     {
-          KDL::Chain chain;
-          KDL::Tree kdl_tree = get_kdl_tree();
-          kdl_tree.getChain("link0", "link7", chain);
+          KDL::Chain *chain = this->chain.get(); // returns a pointer to the stored object
 
           // Set up KDL IK
-          KDL::ChainFkSolverPos_recursive fk_solver = KDL::ChainFkSolverPos_recursive(chain); // Forward kin. solver
-          //KDL::ChainIkSolverVel_pinv vik_solver     = KDL::ChainIkSolverVel_pinv(chain); // PseudoInverse vel solver
+          KDL::ChainFkSolverPos_recursive fk_solver  = KDL::ChainFkSolverPos_recursive(*chain); // Forward kin. solver
+          KDL::ChainIkSolverVel_pinv vik_solver      = KDL::ChainIkSolverVel_pinv(*chain); // PseudoInverse vel solver
           // KDL::ChainIkSolverPos_NR_JL kdl_solver(chain,ll,ul,fk_solver, vik_solver, 1, eps); // Joint Limit Solver
 
           double elapsed = 0;
           KDL::Frame cartpos;
           bool kinematics_status = false;
           double timeout = 0.005;
-          unsigned int num_jts = chain.getNrOfJoints();
+          unsigned int num_jts = chain->getNrOfJoints();
 
           boost::posix_time::ptime start_time;
           boost::posix_time::time_duration diff;
@@ -233,6 +310,7 @@ private:
            ++itPos;
            ++itVel;
       }
+      saved = true;
     }
 
     bool check_file_exists()
@@ -252,20 +330,33 @@ private:
           return false;
         }
     }
+
+    // deprecated
+    void getIK()
+    {
+      trac_ik_torobo::SolveDiffIK srv;
+
+      for(int i=0; i < 7; ++i)
+        srv.request.q_in.push_back(i * std::pow(0.1, 2));
+
+      if (ik_client.call(srv))
+      {
+        for(int i=0; i < srv.response.q_out.size(); ++i)
+          ROS_INFO_STREAM(srv.response.q_out[i]);
+      }
+    }
 };
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "ik_torobo");
-  ros::NodeHandle nh("~");
+  ros::init(argc, argv, "ik_sub");
 
-  Converter converter(nh);
-
+  Converter converter;
   converter.spawn();
 
   if (!ros::ok()){
-    ros::shutdown();
+    return EXIT_SUCCESS;
   }
 
-  return EXIT_SUCCESS;
+  ros::waitForShutdown();;
 }

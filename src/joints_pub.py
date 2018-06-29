@@ -22,10 +22,10 @@ if __name__ == '__main__':
     #name     = 'state_joint_pos_only.npy'
     filename = join(filepath, name)
     data_raw = np.load(filename)
-    print(data_raw.shape)
+    # print(data_raw.shape)
     data     =  np.ravel(data_raw, order='A')
     np.set_printoptions(suppress=True)
-    print(data[:70], data.shape)
+    # print(data[:70], data.shape)
     try:
         rospy.init_node('joints_pub_node')
         talker(data)

@@ -1,15 +1,29 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="num_waypts" default="10" />
   <arg name="chain_start" default="link0" />
   <arg name="chain_end" default="link7" />
   <arg name="timeout" default="0.005" />
-   <!-- be sure to launch the torobo launch file first -->
-  <node name="trac_ik_torobo" pkg="trac_ik_torobo" type="ik_torobo" output="screen">
-    <param name="num_waypts" value="$(arg num_waypts)"/>
+  <arg name="save_to_file" default="false" />  <!-- whether to do joint to cartesian coodinates and save to file -->
+  <arg name="bringup" default="false" /> <!-- bring up in a different terminal -->
+  <arg name="saved" default="false" /> <!-- to save only once. This is turned to true in convert function -->
+  <arg name="disp" default="true" />  <!-- bprint to stdout -->
+
+  <group if="$(arg bringup)" >
+    <!-- launch moveit server -->
+    <include file="$(find toroboarm_seven_bringup)/launch/bringup_real.launch"/>
+  </group>
+
+  <!--launch recorded joints publication node -->
+  <node name="teach_joints" pkg="trac_ik_torobo" type="joints_pub.py" output="screen" />
+
+   <!-- launch ik service and joints to cartesian converter from recorded data -->
+  <node name="trac_ik_torobo" pkg="trac_ik_torobo" type="ik_sub" output="screen">
     <param name="chain_start" value="$(arg chain_start)"/>
     <param name="chain_end" value="$(arg chain_end)"/>
     <param name="timeout" value="$(arg timeout)"/>
+    <param name="saved" value="$(arg saved)"/>
+    <param name="disp" value="$(arg disp)"/>
+    <param name="save_to_file" value="$(arg save_to_file)"/>
     <param name="urdf_param" value="/robot_description"/>
   </node>
 
