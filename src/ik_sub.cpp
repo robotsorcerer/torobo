@@ -67,8 +67,11 @@ class Converter{
       save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
       cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0)
       {
-          base_link = nh_.getParam("chain_start", base_link);
-          tip_link = nh_.getParam("chain_end", tip_link);
+          nh_.getParam("/trac_ik_torobo/chain_start", base_link);
+          nh_.getParam("/trac_ik_torobo/chain_end", tip_link);
+          nh_.getParam("/trac_ik_torobo/save_to_file", save_to_file);
+          nh_.getParam("/trac_ik_torobo/disp", disp);
+          nh_.getParam("/trac_ik_torobo/saved", saved);
 
           get_kdl_tree();
           fk_solver      = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
@@ -78,9 +81,6 @@ class Converter{
           diff_ik_server_   = nh_.advertiseService("/torobo/solve_diff_ik", &Converter::onSolveRequest, this);
           ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo/ik_results", 100, false);
           ik_client         = nh_.serviceClient<trac_ik_torobo::SolveDiffIK>("/torobo/solve_diff_ik");
-          nh_.getParam("save_to_file", save_to_file);
-          nh_.getParam("disp", disp);
-          nh_.getParam("saved", saved);
       }
 
       ~Converter() { }
