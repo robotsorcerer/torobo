@@ -193,8 +193,8 @@ private:
     {
       Eigen::MatrixXd saved_joints;
 
-      // for(; running && ros::ok() ;)
-      // {
+      for(; running && ros::ok() ;)
+      {
           if (updateJoints)
           {
             std::lock_guard<std::mutex> lock(mutex);
@@ -212,7 +212,7 @@ private:
             }
               updateJoints = false;
           }
-      // }
+      }
     }
 
     void calculate_pos(Eigen::MatrixXd const& saved_joints)
@@ -234,8 +234,8 @@ private:
           boost::posix_time::time_duration diff;
 
           int num_waypts = saved_joints.rows();
-          if (disp)
-            ROS_INFO("num_jts: %d, rows [%d]", num_jts, num_waypts );
+          // if (disp)
+          //   ROS_INFO("num_jts: %d, rows [%d]", num_jts, num_waypts );
 
           for (auto i=0; i < num_waypts; i++)
           {

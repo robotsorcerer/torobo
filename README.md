@@ -13,4 +13,6 @@ Currently, there only exists an ik\_tests program that compares KDL's Pseudoinve
 ### Calling IK solver
 + This may consist of calling the server like so in terminal"
     - Note that you can call this  service like so:
-    rosservice call /torobo/solve_diff_ik "'desired_vel': {'linear': {'x': 0.0, 'y': 0.1, 'z': 0.2}}"
+    ```
+        rosservice call /torobo/solve_diff_ik "'desired_vel': {'linear': {'x': 0.0, 'y': 0.1, 'z': 0.2}}"
+    ```
