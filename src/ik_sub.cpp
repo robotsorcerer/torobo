@@ -75,8 +75,7 @@ class Converter{
 
           get_kdl_tree();
           fk_solver      = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
-          vik_solver     = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get()); // PseudoInverse vel solver
-          // KDL::ChainIkSolverPos_NR_JL kdl_solver(chain,ll,ul,fk_solver, vik_solver, 1, eps); // Joint Limit Solver
+          vik_solver     = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
           sub               = nh_.subscribe("/torobo/teach_joints", 10, &Converter::joints_cb, this);
           diff_ik_server_   = nh_.advertiseService("/torobo/solve_diff_ik", &Converter::onSolveRequest, this);
           ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo/ik_results", 100, false);
@@ -99,8 +98,8 @@ private:
       {
         if(spinner.canStart())
         {
-          spinner.start();
           running = true;
+          spinner.start();
           ROS_INFO("spinning with %lu threads", hardware_concurrency/6);
         }
 
@@ -132,8 +131,8 @@ private:
 
     bool onSolveRequest(trac_ik_torobo::SolveDiffIK::Request & req, trac_ik_torobo::SolveDiffIK::Response & res)
     {
-    		KDL::JntArray q_in(7);
-    		KDL::JntArray q_out(7);
+    		KDL::JntArray q_in(cols);
+    		KDL::JntArray q_out(cols);
     		KDL::Vector rot, trans;
 
     		trans.x(req.desired_vel.linear.x);
@@ -181,7 +180,7 @@ private:
 
         if(disp)
         {
-          ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, 10, 7));
+          ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, cols, cols));
         }
 
         std::lock_guard<std::mutex> lock(mutex);
@@ -221,8 +220,7 @@ private:
 
           // Set up KDL IK
           KDL::ChainFkSolverPos_recursive fk_solver  = KDL::ChainFkSolverPos_recursive(*chain); // Forward kin. solver
-          KDL::ChainIkSolverVel_pinv vik_solver      = KDL::ChainIkSolverVel_pinv(*chain); // PseudoInverse vel solver
-          // KDL::ChainIkSolverPos_NR_JL kdl_solver(chain,ll,ul,fk_solver, vik_solver, 1, eps); // Joint Limit Solver
+          KDL::ChainIkSolverVel_pinv vik_solver      = KDL::ChainIkSolverVel_pinv(*chain);      // PseudoInverse vel solver
 
           double elapsed = 0;
           KDL::Frame cartpos;
@@ -234,8 +232,8 @@ private:
           boost::posix_time::time_duration diff;
 
           int num_waypts = saved_joints.rows();
-          // if (disp)
-          //   ROS_INFO("num_jts: %d, rows [%d]", num_jts, num_waypts );
+          if (disp)
+            ROS_INFO("num_jts: %d, rows [%d]", num_jts, num_waypts );
 
           for (auto i=0; i < num_waypts; i++)
           {
