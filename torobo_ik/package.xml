@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>trac_ik_torobo</name>
+  <name>torobo_ik</name>
   <version>1.4.11</version>
   <description> This package contains the source code for testing and comparing trac_ik</description>
   <author>Patrick Ogunmolu</author>
@@ -12,6 +12,7 @@
   <build_depend>rospy</build_depend>
   <build_depend>boost</build_depend>
   <build_depend>dr_kdl</build_depend>
+  <build_depend>roslib</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>orocos_kdl</build_depend>
   <build_depend>kdl_parser</build_depend>
@@ -24,6 +25,7 @@
   <run_depend>message_runtime</run_depend>
   <run_depend>rospy</run_depend>
   <run_depend>boost</run_depend>
+  <run_depend>roslib</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>orocos_kdl</run_depend>
 	<run_depend>kdl_parser</run_depend>

@@ -14,10 +14,10 @@
   </group>
 
   <!--launch recorded joints publication node -->
-  <node name="teach_joints" pkg="trac_ik_torobo" type="joints_pub.py" output="screen" />
+  <node name="teach_joints" pkg="torobo_ik" type="joints_pub.py" output="screen" />
 
    <!-- launch ik service and joints to cartesian converter from recorded data -->
-  <node name="trac_ik_torobo" pkg="trac_ik_torobo" type="ik_sub" output="screen">
+  <node name="torobo_ik" pkg="torobo_ik" type="ik_sub" output="screen">
     <param name="chain_start" value="$(arg chain_start)"/>
     <param name="chain_end" value="$(arg chain_end)"/>
     <param name="timeout" value="$(arg timeout)"/>

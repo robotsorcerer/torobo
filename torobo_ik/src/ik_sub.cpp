@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <ros/ros.h>
+#include <ros/package.h>  /*roslib*/
 #include <ros/spinner.h>
 #include <boost/date_time.hpp>
 #include <trac_ik/trac_ik.hpp>
@@ -26,6 +27,37 @@
 
 using namespace boost::filesystem;
 using namespace pfn;
+
+bool getROSPackagePath(const std::string pkgName, boost::filesystem::path & pkgPath)
+{
+    pkgPath = ros::package::getPath(pkgName);
+    if (pkgPath.empty())
+    {
+        printf("Could not find package '%s' ", pkgName.c_str());
+        return false;
+    }
+    else
+    {
+        printf("%s package found here: %s", pkgName.c_str(), pkgPath.c_str());
+        return true;
+    }
+}
+
+static bool copyDirectory(const boost::filesystem::path srcPath, const boost::filesystem::path dstPath)
+{
+    boost::filesystem::create_directory(dstPath);
+
+    for (boost::filesystem::directory_iterator end, dir(srcPath.c_str()); dir != end; ++dir)
+    {
+        boost::filesystem::path fn = (*dir).path().filename();
+        boost::filesystem::path srcFile = (*dir).path();
+        //cout << "     Source file: " << srcFile.c_str() << endl;
+        boost::filesystem::path dstFile = dstPath / fn;
+        //cout << "Destination file: " << dstFile.c_str() << endl;
+        boost::filesystem::copy_file(srcFile, dstFile);
+    }
+    return true;
+}
 
 class Converter{
   private:
@@ -60,11 +92,13 @@ class Converter{
     ros::Publisher ik_pub_;
     ros::ServiceClient ik_client;
     std::string base_link, tip_link;
+    boost::filesystem::path data_dir;
+    std::stringstream ss;
 
   public:
       Converter()
       :hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
-      save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
+      // save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
       cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0)
       {
           nh_.getParam("/trac_ik_torobo/chain_start", base_link);
@@ -73,7 +107,13 @@ class Converter{
           nh_.getParam("/trac_ik_torobo/disp", disp);
           nh_.getParam("/trac_ik_torobo/saved", saved);
 
+          getROSPackagePath("lyapunovlearner", data_dir);
+          data_dir  = data_dir / "scripts" / "data" / "cart_pos.csv";
+          save_path = data_dir.c_str(); 
+          ROS_INFO_STREAM("save_path " << save_path);
+
           get_kdl_tree();
+
           fk_solver      = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
           vik_solver     = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
           sub               = nh_.subscribe("/torobo/teach_joints", 10, &Converter::joints_cb, this);

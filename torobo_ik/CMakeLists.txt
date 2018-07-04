@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(trac_ik_torobo)
+project(torobo_ik)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
@@ -14,6 +14,7 @@ find_package(catkin REQUIRED
     geometry_msgs
     message_generation
     rospy_tutorials
+    roslib
     kdl_parser
     dr_kdl
 )
@@ -39,7 +40,7 @@ generate_messages(
 
 catkin_package(
   CATKIN_DEPENDS
-    trac_ik_lib std_msgs message_runtime geometry_msgs
+    trac_ik_lib std_msgs message_runtime geometry_msgs roslib
   DEPENDS
     Boost
     orocos_kdl
@@ -69,15 +70,13 @@ macro(add_exec name)
 	)
 endmacro()
 
-#add_executable(ik_sub src/IKVelSolver.cpp src/ik_sub.cpp )
 add_executable(ik_sub src/ik_sub.cpp )
 target_link_libraries(ik_sub ${catkin_LIBRARIES} ${Boost_LIBRARIES}
 											${EIGEN3_LIBRARIES} ${orocos_kdl_LIBRARIES}
 											${Boost_FILESYSTEM_LIBRARY}
 											-lm -ldl)
 
-add_exec(ik_torobo)
-add_exec(teach_jnt_to_cart)
+# add_exec(torobo_ik)
 
 
 
