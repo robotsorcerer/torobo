@@ -14,7 +14,7 @@ def callback(data):
 
 def listener():
     rospy.init_node('listener')
-    rospy.Subscriber("/torobo/teach_joints", numpy_msg(Numpy64), callback)
+    rospy.Subscriber("/torobo_ik/teach_joints", numpy_msg(Numpy64), callback)
     rospy.spin()
 
 if __name__ == '__main__':

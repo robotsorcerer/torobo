@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import rospkg
 from rospy.numpy_msg import numpy_msg
 from trac_ik_torobo.msg import Numpy64
 
@@ -8,16 +9,18 @@ import os
 import numpy as np
 from os.path import expanduser, join
 
+rospack = rospkg.RosPack()
+lyap = rospack.get_path('lyapunovlearner')
 
 def talker(data):
-    pub = rospy.Publisher('/torobo/teach_joints', numpy_msg(Numpy64),queue_size=1)
+    pub = rospy.Publisher('/torobo_ik/teach_joints', numpy_msg(Numpy64),queue_size=1)
     r = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         pub.publish(data)
         r.sleep()
 
 if __name__ == '__main__':
-    filepath = join(expanduser('~'), 'Documents', 'LyapunovLearner', 'ToroboTakahashi', 'data')
+    filepath = join(lyap, 'ToroboTakahashi', 'data')
     name     = 'state_joint.npy'
     #name     = 'state_joint_pos_only.npy'
     filename = join(filepath, name)

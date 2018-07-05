@@ -98,28 +98,27 @@ class Converter{
   public:
       Converter()
       :hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
-      // save_path("/home/olalekan/Documents/LyapunovLearner/scripts/data/cart_pos.csv"),
       cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0)
       {
-          nh_.getParam("/trac_ik_torobo/chain_start", base_link);
-          nh_.getParam("/trac_ik_torobo/chain_end", tip_link);
-          nh_.getParam("/trac_ik_torobo/save_to_file", save_to_file);
-          nh_.getParam("/trac_ik_torobo/disp", disp);
-          nh_.getParam("/trac_ik_torobo/saved", saved);
+          nh_.getParam("/torobo_ik/chain_start", base_link);
+          nh_.getParam("/torobo_ik/chain_end", tip_link);
+          nh_.getParam("/torobo_ik/save_to_file", save_to_file);
+          nh_.getParam("/torobo_ik/disp", disp);
+          nh_.getParam("/torobo_ik/saved", saved);
 
           getROSPackagePath("lyapunovlearner", data_dir);
           data_dir  = data_dir / "scripts" / "data" / "cart_pos.csv";
-          save_path = data_dir.c_str(); 
+          save_path = data_dir.c_str();
           ROS_INFO_STREAM("save_path " << save_path);
 
           get_kdl_tree();
 
           fk_solver      = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
           vik_solver     = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
-          sub               = nh_.subscribe("/torobo/teach_joints", 10, &Converter::joints_cb, this);
-          diff_ik_server_   = nh_.advertiseService("/torobo/solve_diff_ik", &Converter::onSolveRequest, this);
-          ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo/ik_results", 100, false);
-          ik_client         = nh_.serviceClient<trac_ik_torobo::SolveDiffIK>("/torobo/solve_diff_ik");
+          sub               = nh_.subscribe("/torobo_ik/teach_joints", 10, &Converter::joints_cb, this);
+          diff_ik_server_   = nh_.advertiseService("/torobo_ik/solve_diff_ik", &Converter::onSolveRequest, this);
+          ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo_ik/ik_results", 100, false);
+          ik_client         = nh_.serviceClient<trac_ik_torobo::SolveDiffIK>("/torobo_ik/solve_diff_ik");
       }
 
       ~Converter() { }
@@ -149,7 +148,6 @@ private:
         }
 
         threads.push_back(std::thread(&Converter::convert, this));
-        // threads.push_back(std::thread(&Converter::getIK, this));
       	std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
       }
 
@@ -367,21 +365,6 @@ private:
           boost::filesystem::ofstream(save_path);  // create the empty file
           return false;
         }
-    }
-
-    // deprecated
-    void getIK()
-    {
-      trac_ik_torobo::SolveDiffIK srv;
-
-      for(int i=0; i < 7; ++i)
-        srv.request.q_in.push_back(i * std::pow(0.1, 2));
-
-      if (ik_client.call(srv))
-      {
-        for(int i=0; i < srv.response.q_out.size(); ++i)
-          ROS_INFO_STREAM(srv.response.q_out[i]);
-      }
     }
 };
 
