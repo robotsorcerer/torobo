@@ -9,7 +9,6 @@ from rospy.numpy_msg import numpy_msg
 def callback(data):
     ret_data = data.data
     np.set_printoptions(suppress=True)
-    # print(ret_data.shape)
 
 
 def listener():
