@@ -1,3 +1,3 @@
-[submodule "LyapunovLearner"]
-	path = LyapunovLearner
-	url = git@github.com:lakehanne/LyapunovLearner.git
+[submodule "lyapunovlearner"]
+	path = lyapunovlearner
+	url = git@github.com:lakehanne/lyapunovlearner.git
