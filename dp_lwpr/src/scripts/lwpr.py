@@ -18,13 +18,11 @@ class Bundle(object):
 
 class LWPR(object):
 	"""docstring for LWPR"""
-	def __init__(self, *args, x, y, action='Init', lamb = 0.5, diag_only=False,
-					meta=True, meta_rate=0.1, penalty=1e-4,
-					init_alpha=[1,1], norm=None, norm_out = None):
+	def __init__(self, action='Init', *args):
+		# , lamb = 0.5, diag_only=False,
+		# meta=True, meta_rate=0.1, penalty=1e-4,
+		# init_alpha=[1,1], norm=None, norm_out = None
 		super(LWPR, self).__init__()
-
-		self.x 			    = x
-		self.y 			    = y
 
 		self.initializations(action, args)
 
@@ -41,8 +39,8 @@ class LWPR(object):
 			self.init_alpha     = args[7]   #init_alpha
 			self.norm           = args[8]   #norm
 			self.norm_out       = args[9]   #norm_out
-			self.lamb 		    = args[10]   #lamb
-
+			#self.lamb 		    = args[10]   #lamb
+			self.name           = args[10]
 			# convy variables
 			self.n_data         = 0
 			self.w_gen          = 0.1
@@ -186,9 +184,7 @@ class LWPR(object):
 			if (sum_w > 0):
 				yp *= self.norm_out/sum_w
 
-			output       = [yp, wv[2], mean_n_reg]
-
-			return output
+			self.output       = [yp, wv[2], mean_n_reg]
 
 		elif action == 'Predict':
 			ID     = args[0]
@@ -247,12 +243,21 @@ class LWPR(object):
 				yp 	    = yp * self.norm_out
 				conf 	= conf * self.norm_out
 
+			self.
+
 			output      = [yp, max_w]
 
 			if compute_conf:
-				output += [conf]
+				self.output += [conf]
 
-			return output
+		elif action == 'Structure':
+			ID = args[0]
+			self.output = LWPR(ID)
+
+		elif action == 'Clear':
+			ID = args[0]
+
+			self.ID  = []
 
 	def init_rf(self, ID, template_rf, c, y):
 		if template_rf:
