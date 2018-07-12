@@ -9,14 +9,14 @@ class LWPR(object):
 		self.lamb = 0.5
 
 
-	def get_weight(self, x, D, kc, diag_only=True, kernel_type='Gaussian'):
+	def get_weight2(self, x, D, kc, diag_only=True, kernel_type='Gaussian'):
 		"""
 			x: input data
 			D: distance metric
 			kc: kernel center
 			kernel_type: Gaussian or Bisquare
 		"""
-		diff = np.zeros_like(x)
+		diff    = np.zeros_like(x)
 		weights = np.zeros_like(x)
 
 		for i in range(len(x)):
@@ -32,6 +32,24 @@ class LWPR(object):
 		return weights		
 
 
+	def get_weight(self, x, D, kc, diag_only=True, kernel_type='Gaussian'):
+		"""
+			x: input data
+			D: distance metric
+			kc: kernel center
+			kernel_type: Gaussian or Bisquare
+		"""
+		diff = x - kc
+		if kernel_type=='Gaussian':
+			weights = np.exp(-0.5*diff.T.dot(D).dot(diff))
+		elif kernel_type=='BiSquare':	
+			if np.exp(-0.5*diff.T.dot(D).dot(diff)) > 1:
+				weights = 0
+			else:
+				weights = 1.0 -0.5*diff.T.dot(D).dot(diff)
+
+		return weights		
+
 	def update_means(self, rf, x, y, w):
 		W, beta, x_nut, u_nut = [np.zeros(x.shape)] * 4
 
@@ -41,6 +59,7 @@ class LWPR(object):
 			beta[i+1]  = (self.lamb * W[i] * beta[i] + w * y)/W[i+1]
 
 		return x_nut, beta
+
 
 	def update_local_models(self, x, y, r):
 		u      = np.zeros_like(x)
