@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+import os
+from os.path import expanduser, join
 import numpy as np
 from lwpr import LWPR
 
@@ -10,7 +13,7 @@ import matplotlib.animation as manimation
 from mpl_toolkits.mplot3d import Axes3D
 
 def test_lwpr_1D(s):
-    data_path = '/home/olalekan//Documents/StatisticalLearning/lwpr'
+    data_path = join(expanduser('~'), 'Documents/StatisticalLearning/lwpr')
     # load training and testing data
     train = np.loadtxt(data_path + '/' + 'train.data')
     inds  = np.argsort(train[:,0])
@@ -31,9 +34,10 @@ def test_lwpr_1D(s):
     # initialize LWPR
     ID = 1
     if not s:
-        LWPR('Init',ID,1,1,0,0,0,1e-8,50,norm_in,norm_out,'lwpr_test')
+        print('initializing lwpr parameters')
+        lwpr_obj = LWPR('Init',ID,1,1,0,0,0,1e-8,50,norm_in,norm_out,'lwpr_test')
     else:
-        LWPR('Init',ID,s)
+        lwpr_obj = LWPR('Init',ID,s)
 
     # set some parameters
     kernel = 'Gaussian';
@@ -41,40 +45,41 @@ def test_lwpr_1D(s):
     #                              an initial distance metric, as in the next line
     # LWPR('Change',ID,'init_D',[7 0.01; 0.01 7]);
 
-    LWPR('Change',ID,'init_D',30);
-    LWPR('Change',ID,'init_alpha',100);
-    LWPR('Change',ID,'w_gen',0.5);             # more overlap gives smoother surfaces
-    LWPR('Change',ID,'meta',1);                # meta learning can be faster, but numerical more dangerous
-    LWPR('Change',ID,'meta_rate',100);
-    LWPR('Change',ID,'init_lambda',0.995);
-    LWPR('Change',ID,'final_lambda',0.9999);
-    LWPR('Change',ID,'tau_lambda',0.99999);
+    lwpr_obj.initializations('Change', [], ID=ID,  init_D=30);
+    lwpr_obj.initializations('Change', [], ID=ID,  init_alpha=100);
+    lwpr_obj.initializations('Change', [], ID=ID,  w_gen=0.5);             # more overlap gives smoother surfaces
+    lwpr_obj.initializations('Change', [], ID=ID,  meta=1);                # meta learning can be faster, but numerical more dangerous
+    lwpr_obj.initializations('Change', [], ID=ID,  meta_rate=100);
+    lwpr_obj.initializations('Change', [], ID=ID,  init_lambda=0.995);
+    lwpr_obj.initializations('Change', [], ID=ID,  final_lambda=0.9999);
+    lwpr_obj.initializations('Change', [], ID=ID,  tau_lambda=0.99999);
 
+    # print('x: ', X)
     # train the model
     for j in range(100):
-        inds = randperm(n)
+        inds = np.random.permutation(n)
         mse = 0
         for i in range(n):
-            lwpr_obj = LWPR('Update', ID, X[inds[i],:].T, Y[inds[i],:].T)
-            yp,w  = lwpr_obj.output
-            mse    = mse + (Y[inds[i],:] - yp)**2;
+            lwpr_obj.initializations('Update', ID, X[inds[i]], Y[inds[i]])
+            yp, w, _  = lwpr_obj.output
+            mse       = mse + (Y[inds[i]] - yp)**2;
         nMSE = mse/n/(np.var(Y)/len(Y));
-        print('#Data=%d #rfs=%d nMSE=%5.3f (TrainingSet)'.format(lwpr_obj.n_data,len(lwpr_obj.rfs),nMSE)))
+        print('#Data=%d #rfs=%d nMSE={%5:.3f} (TrainingSet)'.format(lwpr_obj.n_data,len(lwpr_obj.rfs),nMSE))
 
     # create predictions for the test data
     Yp   = np.zeros(Yt.shape)
     Conf = np.zeros(Yt.shape)
     for i in range(len(Xt)):
-        lwpr_obj = LWPR('Predict',ID,Xt(i,:)',0.001);
+        lwpr_obj = lwpr_obj.initializations(action='Predict',args=[ID,Xt[i].T,0.001])
         yp, w, conf = lwpr_obj.output
 
     Yp[0,i] = yp
     Conf[i,0] = conf
 
     ep   = Yt-Yp
-    mse  = np.mean(ep.^2)
+    mse  = np.mean(ep**2)
     nmse = mse/(np.var(Y)/len(Y))
-    print('#Data=%d #rfs=%d nMSE=%5.3f (TestSet)'.format(lwpr_obj.n_data,len(lwpr_obj.rfs),nmse)))
+    print('#Data=%d #rfs=%d nMSE=%5.3f (TestSet)'.format(lwpr_obj.n_data,len(lwpr_obj.rfs),nmse))
 
     # get the data structure
     s = LWPR('Structure',ID);
@@ -85,7 +90,7 @@ def test_lwpr_1D(s):
 
     # plot the raw noisy data
     ax.plot(Xt,Yt,'k',X[:,1],Y,'*',Xt,Yp,'r',Xt,Yp+Conf,'r:',Xt,Yp-Conf,'r:')
-    ax.set_title('Noisy data samples and fitted function: nMSE={5:.3f}'.format(nmse)))
+    ax.set_title('Noisy data samples and fitted function: nMSE={5:.3f}'.format(nmse))
 
     # plot the local models
     xmin  =  min(Xt)
@@ -99,7 +104,7 @@ def test_lwpr_1D(s):
     ax.set_title('RF Kernels')
 
     #save results.mat Xt Yp Conf -mat
-    # 
+    #
     # % --------------------------------------------------------------------------------
     # function [X,Y,Z]=makesurf(data,nx)
     # % [X,Y,Z]=makesurf(data,nx) converts the 3D data file data into
@@ -166,3 +171,6 @@ def test_lwpr_1D(s):
     # plot(C(1),C(2),'ro',Xp,Yp,'c');
     #
     # return s
+
+if __name__ == '__main__':
+    test_lwpr_1D([])
