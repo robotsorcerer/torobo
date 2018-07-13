@@ -4,6 +4,8 @@ import numpy as np
 import scipy
 import math
 import scipy.linalg as LAS
+import logging
+logger = logging.getLogger(__name__)
 
 class Bundle(object):
 	"""docstring for Bundle"""
@@ -22,12 +24,22 @@ class Bundle(object):
 	# 	return len(self.dicko)
 
 	def __repr__(self):
-		k, v = [], []
-		for key, val in self.dicko.items():
-			k.append(key)
-			v.append(val)
-		s =' k: {} \nv: {}'.format(k, v)#
+		s = repr(self.__dict__.keys())
+		# for k, v in self.dicko.items():
+		# 	s.append(str(k) + ': ' + str(v))
 		return s
+
+class LWPRID(object):
+	def __init__(self, *args, **kwargs):
+		super(LWPRID, self).__init__()
+
+		if args:
+			self.ID = dict(ID = args[0])
+		else:
+			self.ID = dict(ID = kwargs['ID'])
+
+		Bundle(self.ID)
+
 
 
 class LWPR(object):
@@ -41,90 +53,89 @@ class LWPR(object):
 	def initializations(self, action, *args, **kwargs):
 
 		if action == 'Init':
-			self.ID             = args[0]
-			self.n_in 		    = args[1]
-			self.n_out 		    = args[2]   #len(self.y)
-			self.diag_only	    = args[3]   #diag_only
-			self.meta 		    = args[4]   #meta
-			self.meta_rate 	    = args[5]   #meta_rate
-			self.penalty 	    = args[6]   #penalty
-			self.init_alpha     = args[7]   #init_alpha
-			self.norm           = args[8]   #norm
-			self.norm_out       = args[9]   #norm_out
-			#self.lamb 		    = args[10]   #lamb
-			self.name           = args[10]
+			self.ID             	= LWPRID(*args, **kwargs)
+			self.ID.n_in 		    = args[1]
+			self.ID.n_out 		    = args[2]   #len(self.ID.y)
+			self.ID.diag_only	    = args[3]   #diag_only
+			self.ID.meta 		    = args[4]   #meta
+			self.ID.meta_rate 	    = args[5]   #meta_rate
+			self.ID.penalty 	    = args[6]   #penalty
+			self.ID.init_alpha      = args[7]   #init_alpha
+			self.ID.norm            = args[8]   #norm
+			self.ID.norm_out        = args[9]   #norm_out
+			self.ID.name            = args[10]
+
 			# convy variables
-			self.n_data         = 0
-			self.w_gen          = 0.1
-			self.w_prune        = 0.9
-			self.init_lambda    = 0.999
-			self.final_lambda   = 0.9999
-			self.tau_lambda     = 0.99999
-			self.init_P         = 1
-			self.n_pruned       = 0
-			self.add_threshold  = 0.5
+			self.ID.n_data         = 0
+			self.ID.w_gen          = 0.1
+			self.ID.w_prune        = 0.9
+			self.ID.init_lambda    = 0.999
+			self.ID.final_lambda   = 0.9999
+			self.ID.tau_lambda     = 0.99999
+			self.ID.init_P         = 1
+			self.ID.n_pruned       = 0
+			self.ID.add_threshold  = 0.5
 
 			# other variables
-			self.n_reg          = 2
-			self.init_D         = np.eye(self.n_in)*25
-			self.init_M         = LAS.cholesky(self.init_D)
-			self.init_alpha     = np.ones(self.n_in)*self.init_alpha
-			self.mean_x         = np.zeros((self.n_in,1))
-			self.var_x          = np.zeros((self.n_in,1))
-			self.rfs            = []
-			self.kernel         = 'Gaussian' # can also be 'BiSquare'
-			self.max_rfs        = 1000
-			self.allow_D_update = 1
-			self.conf_method    = 'std' # can also be 't-test', but requires statistics toolbox
+			self.ID.n_reg          = 2
+			self.ID.init_D         = np.eye(self.ID.n_in)*25
+			self.ID.init_M         = LAS.cholesky(self.ID.init_D)
+			self.ID.init_alpha     = np.ones((self.ID.n_in, self.ID.n_in))*self.ID.init_alpha
+			self.ID.mean_x         = np.zeros((self.ID.n_in,1))
+			self.ID.var_x          = np.zeros((self.ID.n_in,1))
+			self.ID.rfs            = []
+			self.ID.kernel         = 'Gaussian' # can also be 'BiSquare'
+			self.ID.max_rfs        = 1000
+			self.ID.allow_D_update = 1
+			self.ID.conf_method    = 'std' # can also be 't-test', but requires statistics toolbox
 
 		elif action == 'Change':
-			# print(kwargs)
-			self.ID     = kwargs['ID']
+			#self.ID     = LWPRID(None, **kwargs)
 			if 'init_alpha' in kwargs:
-				self.init_alpha = kwargs['init_alpha']
+				self.ID.init_alpha = kwargs['init_alpha']
 			elif 'w_gen' in kwargs:
-				self.w_gen = kwargs['w_gen']
+				self.ID.w_gen = kwargs['w_gen']
 			elif 'meta' in kwargs:
-				self.meta = kwargs['meta']
+				self.ID.meta = kwargs['meta']
 			elif 'meta_rate' in kwargs:
-				self.meta_rate = kwargs['meta_rate']
+				self.ID.meta_rate = kwargs['meta_rate']
 			elif 'init_lambda' in kwargs:
-				self.init_lambda = kwargs['init_lambda']
+				self.ID.init_lambda = kwargs['init_lambda']
 			elif 'final_lambda' in kwargs:
-				self.final_lambda = kwargs['final_lambda']
+				self.ID.final_lambda = kwargs['final_lambda']
 			elif 'tau_lambda' in kwargs:
-				self.tau_lambda = kwargs['tau_lambda']
-			self.init_M = scipy.linalg.cholesky(self.init_D)
+				self.ID.tau_lambda = kwargs['tau_lambda']
+			self.ID.init_M = scipy.linalg.cholesky(self.ID.init_D)
 
 		elif action == 'Update':
-			self.ID = args[0]
-			x  = args[1]
-			y  = args[2]
+			x       = args[1]
+			y       = args[2]
 
-			# print('len(args): ', len(args))
+			self.ID.mean_x	       = np.mean(x)
+			self.ID.var_x	       = np.var(x)
+
 			if len(args) > 4:
-				self.composite_control = 1
-				self.e_t               = args[3]
-				self.alpha             = args[4]
+				composite_control = 1
+				e_t               = args[3]
+				alpha             = args[4]
 			else:
-				self.composite_control = 0
+				composite_control = 0
 
 			# update global mean and variance of the training data for information purposes
-			self.mean_x = self.mean_x.dot(self.n_data + x) / (self.n_data + 1)
-			self.var_x  = self.var_x.dot(self.n_data) + ((x - self.mean_x) ** 2)/(self.n_data + 1)
-			self.n_data = self.n_data + 1
+			self.ID.mean_x = (self.ID.mean_x * self.ID.n_data + x) / (self.ID.n_data + 1)
+			self.ID.var_x  = (self.ID.var_x * self.ID.n_data) + ((x - self.ID.mean_x) ** 2)/(self.ID.n_data + 1)
+			self.ID.n_data +=  1
 
 			# normalize the input
-			xn = np.divide(x, self.norm)
-			print('xn: ', xn)
+			xn = np.divide(x, self.ID.norm)
 
 			# normalize the output
-			yn = np.divide(y, self.norm_out)
+			yn = np.divide(y, self.ID.norm_out)
 
-			if self.first_time:
-				self.rfs.append(self.init_rf(self.ID,[],xn,yn))
-
-			self.first_time = False
+			# if self.first_time:
+			# 	self.ID.rfs.append(self.init_rf(self.ID,[],xn,yn))
+			#
+			# self.first_time = False
 
 			"""
 				check all RFs updating
@@ -136,94 +147,102 @@ class LWPR(object):
 			yp        = np.zeros(y.shape)
 			sum_w     = 0
 			sum_n_reg = 0
-			tms       = np.zeros(len(self.rfs))
+			tms       = np.zeros((len(self.ID.rfs)))
 
-			for i in range(len(self.rfs)):
-				print('xn: {}, c: {}, D: {}'.format(xn, self.rfs[i].c,self.rfs[i].D))
+			for i in range(len(self.ID.rfs)):
+				print('i: ', i)
+				print('elements of rf')
+				print(self.ID.rfs[i].D)
+				print(self.ID.rfs[i].c)
+				# for k, v in self.ID.rfs[i].__dict__.items():
+				# 	print(k, v)
+
 				# compute the weight and keep the three larget weights sorted
-				w  = self.compute_weight(self.diag_only,self.kernel,\
-									     self.rfs[i].c,self.rfs[i].D,xn);
-				self.rfs[i].w = w
-				wv[0]         = w
-				iv[0]         = i
-				ind           = np.argsort(wv)
-				iv            = iv[ind]
+				w  = self.compute_weight(self.ID.diag_only,self.ID.kernel,\
+										 self.ID.rfs[i].c,self.ID.rfs[i].D,xn);
+				self.ID.rfs[i].w = w
+				wv[0]            = w
+				iv[0]            = i
+				ind              = np.argsort(wv)
+				iv               = iv[ind]
 
 				# keep track of the average number of projections
-				sum_n_reg     = sum_n_reg + len(self.rfs[i].s)
+				sum_n_reg     = sum_n_reg + len(self.ID.rfs[i].s)
 
 				# only update if activation is high enough
 				if (w > 0.001):
-
-					rf = self.rfs[i]
+					rf = self.ID.rfs[i]
 
 					# update weighted mean for xn and y, and create mean-zero
 					# variables
-					rf,xmz,ymz = self.update_means(self.rfs[i],xn,yn,w)
+					rf,xmz,ymz = self.update_means(self.ID.rfs[i],xn,yn,w)
 
 					# update the regression
 					rf,yp_i,e_cv,e = self.update_regression(rf,xmz,ymz,w)
 					if (rf.trustworthy):
 					  yp    = w.dot(yp_i) + yp
-					  sum_w = sum_w + w
+					  sum_w += w
 
 					# update simple statistical variables
 					rf.sum_w  = rf.sum_w   * rf.lamb + w
 					rf.n_data = rf.n_data  * rf.lamb + 1
-					rf.lamb   = self.tau_lambda * rf.lamb + self.final_lambda*(1.-self.tau_lambda)
+					rf.lamb   = self.ID.tau_lambda * rf.lamb + self.ID.final_lambda*(1.-self.ID.tau_lambda)
 
 					# update the distance metric
-					rf, tm = self.update_distance_metric(self.ID, rf, xmz,ymz,w,e_cv,e,xn);
+					rf, tm = self.update_distance_metric(self.ID.ID, rf, xmz,ymz,w,e_cv,e,xn);
 					tms[i] = 1
 
 					# check whether a projection needs to be added
-					rf = self.check_add_projection(ID, rf)
+					rf = self.check_add_projection(self.ID.ID, rf)
 
 					# incorporate updates
-					self.rfs[i] = rf
+					self.ID.rfs[i] = rf
 
 				else:
-					self.rfs[i].w = 0
+					self.ID.rfs[i].w = 0
 
-			mean_n_reg = sum_n_reg/(len(self.rfs)+1.e-10);
+			mean_n_reg = sum_n_reg/(len(self.ID.rfs)+1.e-10);
 
 			# if LWPR is used for control, incorporate the tracking error
-			if (self.composite_control):
+			if (composite_control):
 			  inds = np.where(tms > 0)
-			  if not inds:
+			  if inds[0]:
 				  for j in range(len(inds[0])):
-					  i = inds[j]
-					  self.rfs[i].B  = self.rfs[i].B  + alpha * tms[j] / self.rfs[i].ss2 * self.rfs[i].w/sum_w * (xn-self.rfs[i].c) * e_t;
-					  self.rfs[i].b0 = self.rfs[i].b0 + alpha * tms[j] / self.rfs[i].sum_w(1) * self.rfs[i].w/sum_w  * e_t;
+					  i = inds[0][j]
+					  self.ID.rfs[i].B  = self.ID.rfs[i].B  + alpha * tms[j] / self.ID.rfs[i].ss2 * self.ID.rfs[i].w/sum_w * (xn-self.ID.rfs[i].c) * e_t;
+					  self.ID.rfs[i].b0 = self.ID.rfs[i].b0 + alpha * tms[j] / self.ID.rfs[i].sum_w[1] * self.ID.rfs[i].w/sum_w  * e_t;
 
 			# do we need to add a new RF?
-			if (wv[2] <= self.w_gen and len(self.rfs)<self.max_rfs):
-				if (wv[2] > 0.1*self.w_gen and self.rfs[iv[2]].trustworthy):
-					self.rfs.append(self.init_rf(ID,self.rfs[iv[2]],xn,yn))
+			if (wv[2] <= self.ID.w_gen and len(self.ID.rfs)<self.ID.max_rfs):
+				if (wv[2] > 0.1*self.ID.w_gen and self.ID.rfs[iv[2]].trustworthy):
+					print('adding new rf')
+					self.ID.rfs.append(self.init_rf(self.ID.ID,self.ID.rfs[iv[2]],xn,yn))
 				else:
-					if (len(self.rfs)==0):
-					    self.rfs = self.init_rf(self.ID,[],xn,y);
+					if (len(self.ID.rfs)==0):
+						print('adding new rf')
+						self.ID.rfs = self.init_rf(self.ID.ID,[],xn,y);
 					else:
-					    self.rfs.append(self.init_rf(self.ID,[],xn,yn))
+						print('adding new rf anyway')
+						self.ID.rfs.append(self.init_rf(self.ID.ID,[],xn,yn))
 
 			# do we need to prune a RF? Prune the one with smaller D
-			if (wv[range(1,2)] > self.w_prune):
-				if (sum(sum(self.rfs[iv[1]].D)) > sum(sum(self.rfs[iv[2]].D))):
-					del self.rfs[iv[1]]
-					print('%d: Pruned #RF=%d'.format(self.ID,iv[1]))
+			if (wv[1:2] > self.ID.w_prune):
+				if (sum(sum(self.ID.rfs[iv[1]].D)) > sum(sum(self.ID.rfs[iv[2]].D))):
+					del self.ID.rfs[iv[1]]
+					print('%d: Pruned #RF=%d'.format(self.ID.ID,iv[1]))
 				else:
-					self.rfs[iv[2]] = []
-					print('%d: Pruned #RF=%d'.format(self.ID,iv[2]))
-				self.n_pruned += 1
+					del self.ID.rfs[iv[2]]
+					print('%d: Pruned #RF=%d'.format(self.ID.ID,iv[2]))
+				self.ID.n_pruned += 1
 
 			# the final prediction
 			if (sum_w > 0):
-				yp = yp * self.norm_out/sum_w
+				yp = yp * self.ID.norm_out/sum_w
 
 			self.output       = [yp, wv[2], mean_n_reg]
 
 		elif action == 'Predict':
-			ID     = args[0]
+			self.ID     = LWPRID(*args, None); #args[0]
 			x      = args[1]
 			cutoff = args[2]
 
@@ -234,41 +253,41 @@ class LWPR(object):
 			compute_conf = 1
 
 			# normalize the inputs
-			xn = x/self.norm
+			xn = x/self.ID.norm
 
 			# maintain the maximal activation
 			max_w    = 0
-			yp       = np.zeros((self.n_out,1))
+			yp       = np.zeros((self.ID.n_out,1))
 			sum_w    = 0
 			sum_conf = 0
 			sum_yp2  = 0
 
-			for i in range(len(self.rfs)):
+			for i in range(len(self.ID.rfs)):
 
 			  # compute the weight
-			  w  = self.compute_weight(self.diag_only,self.kernel,self.rfs[i].c,self.rfs[i].D,xn)
-			  self.rfs[i].w = w
+			  w  = self.compute_weight(self.ID.diag_only,self.ID.kernel,self.ID.rfs[i].c,self.ID.rfs[i].D,xn)
+			  self.ID.rfs[i].w = w
 			  max_w = max(np.c_[max_w,w])
 
 			  # only predict if activation is high enough
-			  if (w > cutoff and self.rfs[i].trustworthy):
+			  if (w > cutoff and self.ID.rfs[i].trustworthy):
 				  # the mean zero input
-				  xmz = xn - self.rfs[i].mean_x
+				  xmz = xn - self.ID.rfs[i].mean_x
 
 				  # compute the projected inputs
-				  s = self.compute_projection(xmz,self.rfs[i].W,self.rfs[i].U);
+				  s = self.compute_projection(xmz,self.ID.rfs[i].W,self.ID.rfs[i].U);
 
 				  # the prediction
-				  aux     = self.rfs[i].B.T.dot(s) + self.rfs[i].b0;
+				  aux     = self.ID.rfs[i].B.T.dot(s) + self.ID.rfs[i].b0;
 				  yp      = yp + aux * w;
 				  sum_yp2 = sum_yp2 + aux**2 * w;
 				  sum_w   = sum_w + w;
 
 				  # confidence intervals if needed
 				  if (compute_conf):
-					  dofs = self.rfs[i].sum_w[0]-self.rfs[i].n_dofs
+					  dofs = self.ID.rfs[i].sum_w[0]-self.ID.rfs[i].n_dofs
 					  if self.conf_method == 'std':
-						  sum_conf = sum_conf + w*self.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
+						  sum_conf = sum_conf + w*self.ID.rfs[i].sum_e2/dofs*(1+(s/self.ID.rfs[i].ss2).T.dot(s).dot(w))
 					  elif self.conf_method ==  't-test':
 						  sum_conf = sum_conf + tinv(0.975,dofs)^2*w*self.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
 
@@ -277,8 +296,8 @@ class LWPR(object):
 				yp  	= yp/sum_w
 				aux 	= (sum_yp2/sum_w - yp**2).dot(sum_w)/(sum_w**2)
 				conf 	= np.sqrt(sum_conf/sum_w**2 + aux)
-				yp 	    = yp * self.norm_out
-				conf 	= conf * self.norm_out
+				yp 	    = yp * self.ID.norm_out
+				conf 	= conf * self.ID.norm_out
 
 			self.output      = [yp, max_w]
 
@@ -286,62 +305,63 @@ class LWPR(object):
 				self.output += [conf]
 
 		elif action == 'Structure':
-			ID = args[0]
-			self.output = self(ID)
+			self.ID = LWPRID(*args)
+			self.output = self.ID
 
 		elif action == 'Clear':
-			ID = args[0]
+			self.ID = LWPRID(*args)
 
-			self.ID  = []
+			self.ID  = None
 
 	def init_rf(self, ID, template_rf, c, y):
 		if template_rf:
 			rf = template_rf
 		else:
 			rf = {
-			'D': self.init_D,
-			'M': self.init_M,
-			'alpha': self.init_alpha,
+			'D': self.ID.init_D,
+			'M': self.ID.init_M,
+			'alpha': self.ID.init_alpha,
 			'b0': y
 			}
 
 		# if more than univariate input, start with two projections such that
 		# we can compare the reduction of residual error between two projections
-		n_in 	= 	self.n_in;
-		n_out 	= 	self.n_out;
+		n_in 	= 	self.ID.n_in;
+		n_out 	= 	self.ID.n_out;
 		if (n_in > 1):
 		  n_reg = 2
 		else:
 		  n_reg = 1
 
 		rf_temp = {
-			'B': np.zeros((self.n_reg, self.n_out)), # the regression parameters
-			'c': c,                         # the center of the '			'SXresYres'   : zeros(n_reg,n_in),         # needed to compute projections
-			'SXresYres':  np.zeros((self.n_reg, self.n_in)),         # needed to compute projections
-			'ss2': np.ones((self.n_reg,1))/self.init_P, # variance per projection
-			'SSYres': np.zeros((self.n_reg,self.n_out)),        # needed to compute linear model
-			'SSXres': np.zeros((self.n_reg,self.n_in)),         # needed to compute input reduction
-			'W': np.eye(self.n_reg,self.n_in),           # matrix of projections vectors
-			'Wnorm': np.zeros((self.n_reg,1)),            # normalized projection vectors
-			'U': np.eye(self.n_reg,self.n_in),           # reduction of input space
-			'H': np.zeros((self.n_reg,self.n_out)),        # trace matrix
-			'r': np.zeros((self.n_reg,1)),            # trace vector
-			'h': np.zeros_like(self.init_alpha),     # a memory term for 2nd order gradients
-			'b': math.log(self.init_alpha+1.e-10),      # a memory term for 2nd order gradients
-			'sum_w': np.ones((self.n_reg,1))*1.e-10,      # the sum of weights
-			'sum_e_cv2i': np.zeros((self.n_reg,1)),            # weighted sum of cross.valid. err. per dim
-			'sum_e_cv2': 0,                         # weighted sum of cross.valid. err. of final output
-			'sum_e2': 0,                         # weighted sum of error (not CV)
-			'trustworthy': 0,    # statistical confidence
-			'n_data': np.ones((self.n_reg,1))*1.e-10,      # discounted amount of data in '			'trustworthy' : 0,                         # indicates statistical confidence
-			'lamb': np.ones((self.n_reg,1))*self.init_lambda, # forgetting rate
-			'mean_x': np.zeros((self.n_in,1)),             # the weighted mean of inputs
-			'var_x': np.zeros((self.n_in,1)),             # the weighted variance of inputs
-			'w': 0,                         # store the last computed weight
-			's': np.zeros((self.n_reg,1)),            # store the projection of inputs
-			'n_dofs': 0,                         # the local degrees of freedom
+			'B': np.zeros((n_reg, self.ID.n_out)),      # the regression parameters
+			'c': c,                                     # the center of the '			'SXresYres'   : zeros(n_reg,n_in),         # needed to compute projections
+			'SXresYres':  np.zeros((n_reg, n_in)),      # needed to compute projections
+			'ss2': np.ones((n_reg,1))/self.ID.init_P, 		# variance per projection
+			'SSYres': np.zeros((n_reg, n_out)),     # needed to compute linear model
+			'SSXres': np.zeros((n_reg,n_in)),           # needed to compute input reduction
+			'W': np.eye(n_reg,n_in),                    # matrix of projections vectors
+			'Wnorm': np.zeros((n_reg,1)),               # normalized projection vectors
+			'U': np.eye(n_reg,n_in),                    # reduction of input space
+			'H': np.zeros((n_reg, n_out)),          # trace matrix
+			'r': np.zeros((n_reg,1)),                   # trace vector
+			'h': np.zeros_like(rf['alpha']),        # a memory term for 2nd order gradients
+			'b': math.log(rf['alpha']+1.e-10),      # a memory term for 2nd order gradients
+			'sum_w': np.ones((n_reg,1))*1.e-10,         # the sum of weights
+			'sum_e_cv2i': np.zeros((n_reg,1)),          # weighted sum of cross.valid. err. per dim
+			'sum_e_cv2': 0,                             # weighted sum of cross.valid. err. of final output
+			'sum_e2': 0,                                # weighted sum of error (not CV)
+			'n_data': np.ones((n_reg,1))*1.e-10,        # discounted amount of data in '			'trustworthy' : 0,                         # indicates statistical confidence
+			'trustworthy': 0,                           # statistical confidence
+			'lamb': np.ones((n_reg,1))*self.ID.init_lambda,# forgetting rate
+			'mean_x': np.zeros((n_in,1)),               # the weighted mean of inputs
+			'var_x': np.zeros((n_in,1)),                # the weighted variance of inputs
+			'w': 0,                                     # store the last computed weight
+			's': np.zeros((n_reg,1)),                   # store the projection of inputs
+			'n_dofs': 0,                                # the local degrees of freedom
 		}
 		rf.update(rf_temp)
+
 
 		return Bundle(rf)
 
@@ -352,13 +372,10 @@ class LWPR(object):
 			kc: kernel center
 			kernel_type: Gaussian or Bisquare
 		"""
-		diff = np.zeros_like(x)
-		weights = np.zeros_like(x)
 
 		diff = x - kc
 
-		print('diff: ', diff)
-		if self.diag_only:
+		if diag_only:
 			d2 = diff.T.dot(diag(D)*diff)
 		else:
 			d2 = diff.T * D * diff
@@ -375,8 +392,6 @@ class LWPR(object):
 
 	def update_means(self, rf, x, y, w):
 
-		# print('rf.sum_w: {} rf.mean_x: {} rf.lamb:  {} w: {} x: {}'
-		# 		.format(rf.sum_w.shape, rf.mean_x.shape, rf.lamb.shape, w.shape, x))
 		rf.mean_x  = (rf.sum_w[0].dot(rf.mean_x).dot(rf.lamb[0]) +
 								 w.dot(x))/(rf.sum_w[0].dot(rf.lamb[0]) + w)
 		rf.var_x   = (rf.sum_w[0].dot(rf.var_x).dot(rf.lamb[0]) +
@@ -396,7 +411,6 @@ class LWPR(object):
 		rf.s, xres  = self.compute_projection(x, rf.W, rf.U)
 
 		# compute all residual errors and targets at all projection stages
-		# print('rf.B: {}, rf.s: {}, n_out: {}'.format(rf.B.shape, rf.s.shape, n_out))
 		yres  = rf.B * (rf.s * np.ones((1,n_out)))
 		for i in range(1, n_reg):
 		  yres[i,:] = yres[i,:] + yres[i-1,:]
@@ -431,8 +445,8 @@ class LWPR(object):
 		yp = yp + rf.b0
 
 		# is the RF trustworthy: a simple data count
-		print('rf.n_data: {} n_in: {}, rf.lamb: {}'.format(rf.n_data, n_in, rf.lamb))
-		if (rf.n_data[0][0] > n_in*2):
+		# print('rf.n_data: {} n_in: {}, rf.lamb: {}'.format(rf.n_data, n_in, rf.lamb))
+		if (rf.n_data > n_in*2):
 		  rf.trustworthy = 1
 
 		return rf, yp, e_cv, e
@@ -449,9 +463,9 @@ class LWPR(object):
 		e_cv2                = sum(e_cv ** 2, 2)
 		e2                   = e.T.dot(e)
 		rf.sum_e_cv2i        = rf.sum_e_cv2i * rf.lamb    + w.dot(e_cv2)
-		rf.sum_e_cv2         = rf.sum_e_cv2 * rf.lamb[0][0]) + w * (e_cv2[-1])
-		rf.sum_e2            = rf.sum_e2.dot(rf.lamb[0])    + w.dot(e2)
-		rf.n_dofs            = rf.n_dofs.dot(rf.lamb[0])    + w**2*(s/rf.ss2).T * s
+		rf.sum_e_cv2         = rf.sum_e_cv2 * rf.lamb[0][0] + w * (e_cv2[-1])
+		rf.sum_e2            = rf.sum_e2*(rf.lamb[0][0])    + w.dot(e2)
+		rf.n_dofs            = rf.n_dofs*(rf.lamb[0][0])    + w**2*(s/rf.ss2).T * s
 		e_cv                 = e_cv[-1,:].T
 		e_cv2                = e_cv.T.dot(e_cv)
 		h                    = w.dot(sum(s** 2. / rf.ss2 * derivative_ok))
@@ -464,14 +478,15 @@ class LWPR(object):
 
 		n_out                = len(y);
 
-		penalty   = self.penalty/len(x)*w/W # normalize penality w.r.t. number of inputs
-		meta      = self.meta
-		meta_rate = self.meta_rate
-		kernel    = self.kernel
-		diag_only = self.diag_only
+		penalty   = self.ID.penalty/len(x)*w/W # normalize penality w.r.t. number of inputs
+		meta      = self.ID.meta
+		meta_rate = self.ID.meta_rate
+		kernel    = self.ID.kernel
+		diag_only = self.ID.diag_only
 
 		# is the update permissible?
-		if (not derivative_ok[0] ) or (not self.allow_D_update):
+		# print('derivative_ok: ', derivative_ok)
+		if (not derivative_ok ) or (not self.ID.allow_D_update):
 			transient_multiplier = 0
 
 		# the derivative dJ1/dw
@@ -489,25 +504,27 @@ class LWPR(object):
 		# the second derivative if meta learning is required, and meta learning update
 		if (meta):
 		  # second derivatives
+		  # print(W, e2, h, w, W.dot(e2).dot(h), 2/(W.dot(e2).dot(h)+1e-5)/w, 1/W**2 * (e_cv2-2*sum(sum(Pse*rf.H))), 2*E/W**3, )
 		  dJ1J1dwdw = -e_cv2/W**2 - 2/W*sum(sum((-Pse/W -2*Ps*(s.T*Pse))*rf.H)) + \
-						2/W.dot(e2).dot(h)/w - 1/W**2 * (e_cv2-2*sum(sum(Pse*rf.H))) + 2*E/W**3
+						2/(W.dot(e2).dot(h)+1e-5)/w - 1/W**2 * (e_cv2-2*sum(sum(Pse*rf.H))) + 2*E/W**3
 
 		  dJJdMdM = (dwwdMdM*dJ1dw + (dwdM**2).dot(dJ1J1dwdw))/n_out + dJ2J2dMdM
 
 		  # update the learning rates
 		  aux = meta_rate * transient_multiplier * (dJdM * rf.h)
 
+		  # print('aux: ', aux)
 		  # limit the update rate
-		  ind = np.where(abs(aux) > 0.1);
+		  ind = np.where(abs(aux) > 0.1)
 		  if ind:
-			  aux[ind] = 0.1*sign(aux[ind])
+			  aux[ind] = 0.1*np.sign(aux[ind])
 
 		  rf.b = rf.b - aux;
 
 		  # prevent numerical overflow
 		  ind = np.where(abs(rf.b) > 10);
 		  if ind:
-			  rf.b[ind] = 10*sign(rf.b[ind])
+			  rf.b[ind] = 10*np.sign(rf.b[ind])
 
 		  rf.alpha = math.exp(rf.b)
 
@@ -524,31 +541,31 @@ class LWPR(object):
 		delta_M = rf.alpha*dJdM.dot(transient_multiplier);
 		ind = np.where(delta_M > 0.1*maxM);
 		if ind:
-		    rf.alpha[ind] = rf.alpha[ind]/2;
-		    delta_M[ind] = 0;
-		    logger.debug('Reduced learning rate')
+			rf.alpha = rf.alpha/2;
+			delta_M[ind] = 0;
+			logger.debug('Reduced learning rate')
 
 		rf.M = rf.M - delta_M;
 		rf.D = rf.M.T*rf.M;
 
 		# update sufficient statistics: note this must come after the updates and
 		# is conditioned on that sufficient samples contributed to the derivative
-		H         = (rf.lamb.dot(np.ones(1,n_out)))*rf.H + (w/(1-h))*s*e_cv.T*transient_multiplier
+		H         = (rf.lamb.dot(np.ones((1,n_out))))*rf.H + (w/(1-h))*s*e_cv.T*transient_multiplier
 		r         = rf.lamb*rf.r + (w**2*e_cv2/(1-h))*(s**2)*transient_multiplier
-		rf.H = (derivative_ok.dot(ones(1,n_out)))*H + (1-derivative_ok.dot(ones(1,n_out))) * rf.H
+		rf.H = derivative_ok * np.ones((1,n_out)) *H + (1-derivative_ok * np.ones((1,n_out))) * rf.H
 		rf.r = derivative_ok*r + (1-derivative_ok) * (rf.r)
 
-		return transient_multiplier
+		return rf, transient_multiplier
 
 	def dist_derivatives(self, w,rf,dx,diag_only,kernel,penalty,meta):
 		# compute derivatives of distance metric: note that these will be upper
 		# triangular matrices for efficiency
 
-		n_in      = len(dx);
-		dwdM      = np.zeros((n_in));
-		dJ2dM     = np.zeros((n_in));
-		dJ2J2dMdM = np.zeros((n_in));
-		dwwdMdM   = np.zeros((n_in));
+		n_in      = len([dx]);
+		dwdM      = np.zeros((n_in, n_in));
+		dJ2dM     = np.zeros((n_in, n_in));
+		dJ2J2dMdM = np.zeros((n_in, n_in));
+		dwwdMdM   = np.zeros((n_in, n_in));
 
 		for n in range(n_in):
 		  for m in range(n, n_in):
@@ -569,33 +586,36 @@ class LWPR(object):
 					  # aux corresponds to the in_th (= ni_th) element of dDdm_nm
 					  # this is directly processed for dwdM and dJ2dM
 					  if (i == m):
-						  aux = 2*self.rf.M[n,i]
-						  dwdM[n,m] = dwdM[n,m] + dx[i].dot(dx[m]).dot(aux);
-						  sum_aux 	= sum_aux   + self.rf.D[i,m].dot(aux);
+						  aux =  2 * rf.M[n,i]
+						  # dwdM[n,m] = dwdM[n,m] + dx[i]* dx[m] *aux
+						  dwdM[n,m] = dwdM[n,m] + dx * dx *aux
+						  sum_aux 	= sum_aux   + rf.D[i,m]*aux
 						  if (meta):
 							  sum_aux1 = sum_aux1 + aux**2
 					  else:
-					     aux = self.rf.M[n,i]
-					     dwdM[n,m] = dwdM[n,m] + 2 * dx[i].dot(dx[m]).dot(aux)
-					     sum_aux = sum_aux + 2 * self.rf.D[i,m].dot(aux)
+						  aux = rf.M[n,i]
+						  # dwdM[n,m] = dwdM[n,m] + 2 * dx[i].dot(dx[m]).dot(aux)
+						  dwdM[n,m] = dwdM[n,m] + 2 * dx*(dx)*(aux)
+						  sum_aux = sum_aux + 2 * self.rf.D[i,m]*(aux)
 					  if (meta):
-						   sum_aux1 = sum_aux1 + 2*aux**2
+						  sum_aux1 = sum_aux1 + 2*aux**2
 
 			  if kernel == 'Gaussian':
-			  	  dwdM[n,m]  = -0.5*w*dwdM[n,m]
+				  dwdM[n,m]  = -0.5*w*dwdM[n,m]
 			  elif kernel == 'BiSquare':
-			  	  dwdM[n,m]  = -np.sqrt(w)*dwdM[n,m]
+				  dwdM[n,m]  = -np.sqrt(w)*dwdM[n,m]
 
 			  dJ2dM[n,m]  = 2.* penalty.dot(sum_aux)
 
 			  if (meta):
-			      dJ2J2dMdM[n,m] = 2 * penalty*(2*self.rf.D[m,m] + sum_aux1)
-			      dJ2J2dMdM[m,n] = dJ2J2dMdM[n,m]
-			      if kernel   ==  'Gaussian':
-				      dwwdMdM[n,m]   = dwdM[n,m]**2/w - w*dx[m]**2;
-			      elif kernel ==  'BiSquare':
-				      dwwdMdM[n,m]   = dwdM[n,m] ** 2/w/2 - 2*np.sqrt(w)*dx[m] ** 2
-			      dwwdMdM[m,n]   = dwwdMdM[n,m]
+				  dJ2J2dMdM[n,m] = 2 * penalty*(2*rf.D[m,m] + sum_aux1)
+				  dJ2J2dMdM[m,n] = dJ2J2dMdM[n,m]
+				  if kernel   ==  'Gaussian':
+					  # dwwdMdM[n,m]   = dwdM[n,m]**2/w - w*dx[m]**2;
+					  dwwdMdM[n,m]   = dwdM[n,m]**2/w - w*dx**2;
+				  elif kernel ==  'BiSquare':
+					  dwwdMdM[n,m]   = dwdM[n,m] ** 2/w/2 - 2*np.sqrt(w)*dx[m] ** 2
+				  dwwdMdM[m,n]   = dwwdMdM[n,m]
 
 		return dwdM,dJ2dM,dwwdMdM,dJ2J2dMdM
 
@@ -616,7 +636,7 @@ class LWPR(object):
 
 		return s, xres
 
-	def check_add_projection(self, rf):
+	def check_add_projection(self, ID, rf):
 		# checks whether a new projection needs to be added to the rf
 
 		n_reg,n_in  = rf.W.shape
@@ -636,13 +656,15 @@ class LWPR(object):
 		mse_n_reg   = rf.sum_e_cv2i[n_reg]   / rf.sum_w[n_reg] + 1.e-10;
 		mse_n_reg_1 = rf.sum_e_cv2i[n_reg-1] / rf.sum_w[n_reg-1] + 1.e-10;
 
-		if (mse_n_reg/mse_n_reg_1 < self.add_threshold and
-			rf.n_data[n_reg]/rf.n_data[1] > 0.99 and
-			rf.n_data[n_reg].dot(1.-rf.lamb[n_reg]) > 0.5):
+		if (
+			(mse_n_reg/mse_n_reg_1 < self.ID.add_threshold) and
+			(rf.n_data[n_reg]/rf.n_data[1] > 0.99) and
+			(rf.n_data[n_reg] * (1.-rf.lamb[n_reg]) > 0.5)
+			):
 
 		  rf.B         = np.r_[rf.B,  np.zeros((1,n_out))]
 		  rf.SXresYres = np.r_[rf.SXresYres,  np.zeros((1,n_in))]
-		  rf.ss2       = np.r_[rf.ss2, self.init_P]
+		  rf.ss2       = np.r_[rf.ss2, self.ID.init_P]
 		  rf.SSYres    = np.r_[rf.SSYres, np.zeros((1,n_out))]
 		  rf.SSXres    = np.r_[rf.SSXres, np.zeros((1,n_in))]
 		  rf.W         = np.r_[rf.W, np.zeros((1,n_in))]
@@ -653,7 +675,7 @@ class LWPR(object):
 		  rf.sum_w     = np.r_[rf.sum_w, 1.e-10]
 		  rf.sum_e_cv2i= np.r_[rf.sum_e_cv2i, 0]
 		  rf.n_data    = np.r_[rf.n_data, 0]
-		  rf.lamb      = np.r_[rf.lamb, self.init_lambda]
+		  rf.lamb      = np.r_[rf.lamb, self.ID.init_lambda]
 		  rf.s         = np.r_[rf.s, 0]
 
 		return rf

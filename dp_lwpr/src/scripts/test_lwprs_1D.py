@@ -22,6 +22,7 @@ def test_lwpr_1D(s):
     Y     = train[:,1]
     n     = len(X)
 
+    print('n: ', n)
     test  = np.loadtxt(data_path + '/' + 'test.data')
     inds  = np.argsort(test[:,0])
     test  = test[inds,:]
