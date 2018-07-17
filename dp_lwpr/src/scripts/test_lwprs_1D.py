@@ -55,12 +55,13 @@ def test_lwpr_1D(s):
     lwpr_obj.initializations('Change', [], ID=ID,  final_lambda=0.9999);
     lwpr_obj.initializations('Change', [], ID=ID,  tau_lambda=0.99999);
 
-    # print('x: ', X)
     # train the model
     for j in range(100):
         inds = np.random.permutation(n)
+        # print('inds: ', len(inds))
         mse = 0
         for i in range(n):
+            print('i_n: ', i)
             lwpr_obj.initializations('Update', ID, X[inds[i]], Y[inds[i]])
             yp, w, _  = lwpr_obj.output
             mse       = mse + (Y[inds[i]] - yp)**2;

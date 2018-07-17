@@ -54,6 +54,7 @@ class LWPR(object):
 
 		if action == 'Init':
 			self.ID             	= LWPRID(*args, **kwargs)
+			self.ID.ID              = args[0]
 			self.ID.n_in 		    = args[1]
 			self.ID.n_out 		    = args[2]   #len(self.ID.y)
 			self.ID.diag_only	    = args[3]   #diag_only
@@ -132,43 +133,43 @@ class LWPR(object):
 			# normalize the output
 			yn = np.divide(y, self.ID.norm_out)
 
-			# if self.first_time:
-			# 	self.ID.rfs.append(self.init_rf(self.ID,[],xn,yn))
-			#
-			# self.first_time = False
+			if self.first_time:
+				self.ID.rfs.append(self.init_rf(self.ID,[],xn,yn))
+				print('first time')
+
+			self.first_time = False
 
 			"""
 				check all RFs updating
 				wv is a vector of 3 weights, ordered [w; sec_w; max_w]
 				iv is the corresponding vector containing the RF indices
 			"""
-			wv        = np.zeros((3,1))
-			iv        = np.zeros((3,1))
+			wv        = np.zeros((3))
+			iv        = np.zeros((3))
 			yp        = np.zeros(y.shape)
 			sum_w     = 0
 			sum_n_reg = 0
-			tms       = np.zeros((len(self.ID.rfs)))
+			tms       = []
 
+			i = 0
+			print('len(self.ID.rfs): ', len(self.ID.rfs))
+			# print('lwpr_obj: ', self.ID.rfs)
 			for i in range(len(self.ID.rfs)):
-				print('i: ', i)
-				print('elements of rf')
-				print(self.ID.rfs[i].D)
-				print(self.ID.rfs[i].c)
-				# for k, v in self.ID.rfs[i].__dict__.items():
-				# 	print(k, v)
-
 				# compute the weight and keep the three larget weights sorted
-				w  = self.compute_weight(self.ID.diag_only,self.ID.kernel,\
+				w  = self.compute_weight(self.ID.diag_only,self.ID.kernel, \
 										 self.ID.rfs[i].c,self.ID.rfs[i].D,xn);
 				self.ID.rfs[i].w = w
 				wv[0]            = w
 				iv[0]            = i
 				ind              = np.argsort(wv)
 				iv               = iv[ind]
+				self.ID.rfs.insert(0, self.init_rf(self.ID,[],xn,yn))
 
 				# keep track of the average number of projections
+				print('self.ID.rfs[i]: ', self.ID.rfs[i])
 				sum_n_reg     = sum_n_reg + len(self.ID.rfs[i].s)
 
+				# print('w: ', w)
 				# only update if activation is high enough
 				if (w > 0.001):
 					rf = self.ID.rfs[i]
@@ -190,22 +191,25 @@ class LWPR(object):
 
 					# update the distance metric
 					rf, tm = self.update_distance_metric(self.ID.ID, rf, xmz,ymz,w,e_cv,e,xn);
-					tms[i] = 1
+					tms.append(1)
 
 					# check whether a projection needs to be added
 					rf = self.check_add_projection(self.ID.ID, rf)
 
 					# incorporate updates
 					self.ID.rfs[i] = rf
-
 				else:
 					self.ID.rfs[i].w = 0
+					tms.append(0)
+
+				i += 1
 
 			mean_n_reg = sum_n_reg/(len(self.ID.rfs)+1.e-10);
-
+			tms = np.array(tms)
 			# if LWPR is used for control, incorporate the tracking error
 			if (composite_control):
 			  inds = np.where(tms > 0)
+			  # print('inds: ', inds)
 			  if inds[0]:
 				  for j in range(len(inds[0])):
 					  i = inds[0][j]
@@ -213,17 +217,17 @@ class LWPR(object):
 					  self.ID.rfs[i].b0 = self.ID.rfs[i].b0 + alpha * tms[j] / self.ID.rfs[i].sum_w[1] * self.ID.rfs[i].w/sum_w  * e_t;
 
 			# do we need to add a new RF?
-			if (wv[2] <= self.ID.w_gen and len(self.ID.rfs)<self.ID.max_rfs):
-				if (wv[2] > 0.1*self.ID.w_gen and self.ID.rfs[iv[2]].trustworthy):
-					print('adding new rf')
-					self.ID.rfs.append(self.init_rf(self.ID.ID,self.ID.rfs[iv[2]],xn,yn))
+			if ((wv[2] <= self.ID.w_gen) and (len(self.ID.rfs)<self.ID.max_rfs)):
+				if ((wv[2] > 0.1*self.ID.w_gen )and (self.ID.rfs[iv[2]].trustworthy)):
+					print('adding new rf cond 1')
+					new_rf  = self.init_rf(self.ID,[],xn,yn)
+					# print('newrf: 2.1', new_rf)
+					self.ID.rfs.insert(0, self.init_rf(self.ID,self.ID.rfs[iv[2]],xn,yn))
 				else:
-					if (len(self.ID.rfs)==0):
-						print('adding new rf')
-						self.ID.rfs = self.init_rf(self.ID.ID,[],xn,y);
-					else:
-						print('adding new rf anyway')
-						self.ID.rfs.append(self.init_rf(self.ID.ID,[],xn,yn))
+					print('adding new rf anyway;  cond 2.2')
+					new_rf  = self.init_rf(self.ID,[],xn,yn)
+					# print('newrf: 2.2', new_rf)
+					self.ID.rfs.insert(0, new_rf)
 
 			# do we need to prune a RF? Prune the one with smaller D
 			if (wv[1:2] > self.ID.w_prune):
@@ -242,7 +246,7 @@ class LWPR(object):
 			self.output       = [yp, wv[2], mean_n_reg]
 
 		elif action == 'Predict':
-			self.ID     = LWPRID(*args, None); #args[0]
+			self.ID.ID     = args[0]
 			x      = args[1]
 			cutoff = args[2]
 
@@ -257,7 +261,7 @@ class LWPR(object):
 
 			# maintain the maximal activation
 			max_w    = 0
-			yp       = np.zeros((self.ID.n_out,1))
+			yp       = np.zeros((self.ID.n_out))
 			sum_w    = 0
 			sum_conf = 0
 			sum_yp2  = 0
@@ -267,7 +271,7 @@ class LWPR(object):
 			  # compute the weight
 			  w  = self.compute_weight(self.ID.diag_only,self.ID.kernel,self.ID.rfs[i].c,self.ID.rfs[i].D,xn)
 			  self.ID.rfs[i].w = w
-			  max_w = max(np.c_[max_w,w])
+			  max_w = max(max_w,w)
 
 			  # only predict if activation is high enough
 			  if (w > cutoff and self.ID.rfs[i].trustworthy):
@@ -289,7 +293,7 @@ class LWPR(object):
 					  if self.conf_method == 'std':
 						  sum_conf = sum_conf + w*self.ID.rfs[i].sum_e2/dofs*(1+(s/self.ID.rfs[i].ss2).T.dot(s).dot(w))
 					  elif self.conf_method ==  't-test':
-						  sum_conf = sum_conf + tinv(0.975,dofs)^2*w*self.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
+						  sum_conf = sum_conf + tinv(0.975,dofs)**2*w*self.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
 
 			# the final prediction
 			if (sum_w > 0):
