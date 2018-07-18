@@ -58,13 +58,14 @@ def test_lwpr_1D(s):
     # train the model
     for j in range(100):
         inds = np.random.permutation(n)
-        # print('inds: ', len(inds))
         mse = 0
+        # print('j: ', j)
         for i in range(n):
-            print('i_n: ', i)
+            # print('i/n: %d/%d, status: %s' % (i, j, 'updating'))
             lwpr_obj.initializations('Update', ID, X[inds[i]], Y[inds[i]])
             yp, w, _  = lwpr_obj.output
             mse       = mse + (Y[inds[i]] - yp)**2;
+            # print('yp: %.4f, w: %.4f, mse: %.4f'%(yp, w, mse))
         nMSE = mse/n/(np.var(Y)/len(Y));
         print('#Data=%d #rfs=%d nMSE={%5:.3f} (TrainingSet)'.format(lwpr_obj.n_data,len(lwpr_obj.rfs),nMSE))
 
