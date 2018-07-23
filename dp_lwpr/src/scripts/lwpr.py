@@ -1,10 +1,10 @@
 from __future__ import print_function
 
-import numpy as np
-import scipy
 import math
-import scipy.linalg as LAS
+import scipy
 import logging
+import numpy as np
+import scipy.linalg as LAS
 logger = logging.getLogger(__name__)
 
 class Bundle(object):
@@ -16,17 +16,10 @@ class Bundle(object):
 			object.__setattr__(self, key, val)
 
 	def __setattr__(self, key, value):
-		# if not hasattr(self, key):
-		#     raise AttributeError("%r has no attribute %s" % (self, key))
 		object.__setattr__(self, key, value)
-
-	# def __len__(self):
-	# 	return len(self.dicko)
 
 	def __repr__(self):
 		s = repr(self.__dict__.keys())
-		# for k, v in self.dicko.items():
-		# 	s.append(str(k) + ': ' + str(v))
 		return s
 
 class LWPRID(object):
@@ -115,8 +108,8 @@ class LWPR(object):
 			x       = args[1]
 			y       = args[2]
 
-			self.ID.mean_x	       = np.mean(x)
-			self.ID.var_x	       = np.var(x)
+			# self.ID.mean_x	       = np.mean(x)
+			# self.ID.var_x	       = np.var(x)
 
 			if len(args) > 4:
 				composite_control = 1
@@ -163,8 +156,7 @@ class LWPR(object):
 				iv[0]            = i
 				ind              = np.argsort(wv)
 				wv               = sorted(wv)
-				iv               = iv[ind]
-				iv               = np.array([int(x) for x in iv])
+				iv               = np.array([int(x) for x in iv[ind]])
 
 				sum_n_reg     = sum_n_reg + len(self.ID.rfs[i].s)
 
@@ -206,7 +198,6 @@ class LWPR(object):
 			# if LWPR is used for control, incorporate the tracking error
 			if (composite_control):
 			  inds = np.where(tms > 0)
-			  # print('inds: ', inds)
 			  if inds[0]:
 				  for j in range(len(inds[0])):
 					  i = inds[0][j]
@@ -216,8 +207,7 @@ class LWPR(object):
 			# do we need to add a new RF?
 			# print('len(self.ID.rfs): ', len(self.ID.rfs), ' | self.ID.max_rfs: ', self.ID.max_rfs)
 			if ((wv[2] <= self.ID.w_gen) and (len(self.ID.rfs)<self.ID.max_rfs)):
-				if (	(wv[1] > 0.1*self.ID.w_gen ) and \
-						(wv[2] > 0.1*self.ID.w_gen ) and \
+				if (	(wv[2] > 0.1*self.ID.w_gen ) and 
 						(self.ID.rfs[int(iv[2])].trustworthy)
 						):
 					print('adding new rf cond 1')
@@ -416,30 +406,38 @@ class LWPR(object):
 
 		# compute all residual errors and targets at all projection stages
 		yres  = rf.B * (rf.s * np.ones((1,n_out)))
-		# print('n_reg: ', n_reg)
+		print('n_reg: ', n_reg)
 		for i in range(1, n_reg):
 		  yres[i,:] = yres[i,:] + yres[i-1,:]
 
 		yres        = np.ones((n_reg,1)).dot(y.T) - yres
 		e_cv        = yres
 
-		print('yres ', yres,  ' y: ', y)
-		ytarget     = np.r_[y.T, yres[:n_reg]]
+		# print('y: {}, yres: {}, yres: {}'.format(y, yres, yres.ndim))
+		# if yres.shape[-1] == 1:
+		# 	ytarget     = np.r_[y, yres[0]]
+		# else:
+		# print('y: {}, yres: {}, yres: {}'.format(y, yres, yres[slice(0, n_reg)]))
+		ytarget     = np.c_[y, yres[slice(0, n_reg)]]
 
 		# update the projections
 		lambda_slow       = 1 - (1- rf.lamb)/10;
 		rf.SXresYres = rf.SXresYres * (lambda_slow * np.ones((1,n_in))) + \
 						w * sum(ytarget,2) * np.ones((1,n_in))*xres
 		rf.Wnorm     = np.sqrt(sum(rf.SXresYres ** 2, 2)) + 1.e-10
-		rf.W         = np.divide(rf.SXresYres, (rf.Wnorm.dot(np.ones((1,n_in)))))
+		# print('rf.Wnorm: {}, rf.SXresYres: {}'.format(rf.Wnorm.shape, rf.SXresYres.shape))
+		# print('rf.Wnorm: {}'.format( rf.Wnorm.dot(np.ones((1,n_in)))))
+		rf.W         = np.divide(rf.SXresYres, rf.Wnorm)
 
 		# update sufficient statistics for regressions
 		rf.ss2       = (rf.lamb * rf.ss2) + (rf.s ** 2).dot(w);
-		# print('rf.lamb {}, rf.SSYres: {}, w: {}, ytarget: {}, rf.s: {}'
-		# 		.format(rf.lamb.shape, rf.SSYres.shape, w.shape, ytarget.shape, rf.s.shape))
-		rf.SSYres    = (rf.lamb * np.ones((1,n_out))) * rf.SSYres + w * ytarget * (rf.s * np.ones((1,n_out)))
+		print(' rf.lamb {}, rf.SSYres: {}, w: {}, ytarget: {}, rf.s: {}, n_out: {}'
+			.format(rf.lamb.shape, rf.SSYres.shape, w.shape, ytarget.shape, \
+				   rf.s.shape, n_out))
+		print(' rf.SSYres: ', rf.SSYres)
+		rf.SSYres    = rf.lamb * np.ones((1,n_out)) * rf.SSYres + w * ytarget * (rf.s * np.ones((1,n_out)))
 		# print('rf.lamb {}, rf.SSXres: {}, xres: {}'.format(rf.lamb.shape, rf.SSXres.shape, xres.shape))
-		rf.SSXres    = (rf.lamb * np.ones((1,n_in)))  * rf.SSXres + w * rf.s*np.ones((1,n_in)) * xres
+		rf.SSXres    = rf.lamb * np.ones((1,n_in))  * rf.SSXres + w * rf.s*np.ones((1,n_in)) * xres
 
 		# update the regression and input reduction parameters
 		# print('rf.ss2:  ', rf.ss2.shape)
@@ -635,13 +633,15 @@ class LWPR(object):
 
 		s = np.zeros((n_reg,1))
 
-		# print('x: ', x.shape)
 		xres = np.zeros((n_reg, 1))
+		print('x: ', x, ' xres: ', xres)
 
 		for i in range(n_reg):
+		  # print('s: ', s, ' W: ', W, ' W[i].dot(x) ', W[i])
 		  xres[i,:] = x.T
-		  s[i]      = W[i,:].dot(x);
-		  x         = x - U[i,:].T.dot(s[i]);
+		  # s[i]      = W[i,:].dot(x)
+		  s[i]      = W[i][0] * x
+		  x         = x - U[i,:].T.dot(s[i])
 
 		return s, xres
 
@@ -661,13 +661,14 @@ class LWPR(object):
 			heuristics had to be added to ensure that the MSE decision is
 			based on sufficient data
 		"""
-
-		mse_n_reg   = rf.sum_e_cv2i[n_reg]   / rf.sum_w[n_reg] + 1.e-10;
-		mse_n_reg_1 = rf.sum_e_cv2i[n_reg-1] / rf.sum_w[n_reg-1] + 1.e-10;
+		# print('rf.sum_e_cv2i: {}, n_reg: {}, rf.sum_w: {}'
+		# 	.format(rf.sum_e_cv2i, n_reg, rf.sum_w))
+		mse_n_reg   = rf.sum_e_cv2i.flatten()[n_reg]   / rf.sum_w.flatten()[n_reg] + 1.e-10;
+		mse_n_reg_1 = rf.sum_e_cv2i.flatten()[n_reg-1] / rf.sum_w.flatten()[n_reg-1] + 1.e-10;
 
 		if (
 			(mse_n_reg/mse_n_reg_1 < self.ID.add_threshold) and
-			(rf.n_data[n_reg]/rf.n_data[1] > 0.99) and
+			(rf.n_data[n_reg]/rf.n_data[0] > 0.99) and
 			(rf.n_data[n_reg] * (1.-rf.lamb[n_reg]) > 0.5)
 			):
 
