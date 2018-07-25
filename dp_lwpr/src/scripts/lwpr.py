@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import time
 import math
 import scipy
 import logging
@@ -105,8 +106,9 @@ class LWPR(object):
 			self.ID.init_M = scipy.linalg.cholesky(self.ID.init_D)
 
 		elif action == 'Update':
-			x       = args[1]
-			y       = args[2]
+			self.ID.ID   = args[0]
+			x            = args[1]
+			y            = args[2]
 
 			if len(args) > 4:
 				composite_control = 1
@@ -128,7 +130,6 @@ class LWPR(object):
 
 			if self.first_time:
 				self.ID.rfs.append(self.init_rf(self.ID,[],xn,yn))
-				print('first time')
 
 			self.first_time = False
 
@@ -139,7 +140,8 @@ class LWPR(object):
 			"""
 			wv        = np.zeros((3))
 			iv        = np.zeros((3))
-			yp        = np.zeros(y.shape)
+			yp        = np.zeros((1)) if y.ndim is 0 else np.zeros(y.shape)
+			print('y outer ', yp, yp.shape)
 			sum_w     = 0
 			sum_n_reg = 0
 			tms       = []
@@ -165,9 +167,15 @@ class LWPR(object):
 
 					# update the regression
 					rf,yp_i,e_cv,e = self.update_regression(rf,xmz,ymz,w)
+
+					print('y ', yp)
+					print('yp_i: ', yp_i)
+					time.sleep(0.4)
+
 					if (rf.trustworthy):
-					  yp    = w.squeeze().dot(yp_i.squeeze()) + yp
+					  yp    = w.dot(yp_i) + yp
 					  sum_w += w
+
 
 					# update simple statistical variables
 					rf.sum_w  = rf.sum_w   * rf.lamb + w
@@ -176,7 +184,8 @@ class LWPR(object):
 								self.ID.final_lambda*(1.-self.ID.tau_lambda)
 
 					# update the distance metric
-					rf, tm = self.update_distance_metric(self.ID.ID, rf, xmz,ymz,w,e_cv,e,xn);
+					rf, tm = self.update_distance_metric(self.ID.ID, rf, xmz, \
+									ymz,w,e_cv,e,xn);
 					tms.append(1)
 
 					# check whether a projection needs to be added
@@ -194,6 +203,7 @@ class LWPR(object):
 			# if LWPR is used for control, incorporate the tracking error
 			if (composite_control):
 			  inds = np.where(tms > 0)
+			  print('inds: ', inds)
 			  if inds[0]:
 				  for j in range(len(inds[0])):
 					  i = inds[0][j]
@@ -220,17 +230,18 @@ class LWPR(object):
 			if ((wv[1] > self.ID.w_prune) and (wv[2] > self.ID.w_prune)):
 				if (sum(sum(self.ID.rfs[iv[1]].D)) > sum(sum(self.ID.rfs[iv[2]].D))):
 					del self.ID.rfs[iv[1]]
-					print('{}: Pruned #RF={}'.format(self.ID.ID,iv[1]))
+					logger.debug('{}: Pruned #RF={}'.format(self.ID.ID,iv[1]))
 				else:
 					del self.ID.rfs[iv[2]]
-					print('{}: Pruned #RF={}'.format(self.ID.ID,iv[2]))
+					logger.debug('{}: Pruned #RF={}'.format(self.ID.ID,iv[2]))
 				self.ID.n_pruned += 1
 
 			# the final prediction
 			if (sum_w > 0):
-				yp    = yp.squeeze() * self.ID.norm_out/sum_w.squeeze()
+				# yp    = yp.squeeze() * self.ID.norm_out/sum_w.squeeze()
+				yp    = yp * self.ID.norm_out/sum_w
 
-			self.output       = [yp, wv[2], mean_n_reg]
+			self.output       = yp, wv[2], mean_n_reg
 
 		elif action == 'Predict':
 			self.ID.ID     = args[0]
@@ -404,10 +415,13 @@ class LWPR(object):
 		n_reg, n_in = rf.W.shape
 		n_out       = len(y)
 
+		print('y: {}, n_out: {}'.format(y, n_out))
+
 		rf.s, xres  = self.compute_projection(x, rf.W, rf.U)
 
 		# compute all residual errors and targets at all projection stages
 		yres  = rf.B * (rf.s * np.ones((1,n_out)))
+		print('yres: ', yres)
 		for i in range(1, n_reg):
 		  yres[i,:] = yres[i,:] + yres[i-1,:]
 

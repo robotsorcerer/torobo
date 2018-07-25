@@ -59,15 +59,14 @@ def test_lwpr_1D(s):
     for j in range(100):
         inds = np.random.permutation(n)
         mse = 0
-        # print('j: ', j)
         for i in range(n):
-            # print('i/n: %d/%d, status: %s' % (i, j, 'updating'))
             lwpr_obj.initializations('Update', ID, X[inds[i]], Y[inds[i]])
             yp, w, _  = lwpr_obj.output
+            # print('yp: {}, w: {}'.format(yp, w))
             mse       = mse + (Y[inds[i]] - yp)**2;
         nMSE = mse/n/(np.var(Y)/len(Y));
-        print('#Data={} #rfs={} nMSE={} {}'
-                .format(lwpr_obj.ID.n_data, len(lwpr_obj.ID.rfs), nMSE, '(TrainingSet)'))
+        print('j: {}, #Data={} #rfs={} nMSE={} {}'
+                .format(j, lwpr_obj.ID.n_data, len(lwpr_obj.ID.rfs), nMSE, '(TrainingSet)'))
 
     # create predictions for the test data
     Yp   = np.zeros(Yt.shape)
