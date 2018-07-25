@@ -141,7 +141,7 @@ class LWPR(object):
 			wv        = np.zeros((3))
 			iv        = np.zeros((3))
 			yp        = np.zeros((1)) if y.ndim is 0 else np.zeros(y.shape)
-			print('y outer ', yp, yp.shape)
+			# print('y outer ', yp, yp.shape)
 			sum_w     = 0
 			sum_n_reg = 0
 			tms       = []
@@ -168,7 +168,7 @@ class LWPR(object):
 					# update the regression
 					rf,yp_i,e_cv,e = self.update_regression(rf,xmz,ymz,w)
 
-					print('y ', yp)
+					print('y:    ', yp)
 					print('yp_i: ', yp_i)
 					time.sleep(0.4)
 
@@ -203,7 +203,7 @@ class LWPR(object):
 			# if LWPR is used for control, incorporate the tracking error
 			if (composite_control):
 			  inds = np.where(tms > 0)
-			  print('inds: ', inds)
+			  # print('inds: ', inds)
 			  if inds[0]:
 				  for j in range(len(inds[0])):
 					  i = inds[0][j]
@@ -329,32 +329,31 @@ class LWPR(object):
 		else:
 		  n_reg = 1
 
-		# print('rf alpha: ', rf.__dict__['alpha'])
 		rf_temp = {
-			'B': np.zeros((n_reg, self.ID.n_out)),      # the regression parameters
-			'c': c,                                     # the center of the '			'SXresYres'   : zeros(n_reg,n_in),         # needed to compute projections
-			'SXresYres':  np.zeros((n_reg, n_in)),      # needed to compute projections
-			'ss2': np.ones((n_reg,1))/self.ID.init_P, 		# variance per projection
-			'SSYres': np.zeros((n_reg, n_out)),     # needed to compute linear model
-			'SSXres': np.zeros((n_reg,n_in)),           # needed to compute input reduction
-			'W': np.eye(n_reg,n_in),                    # matrix of projections vectors
-			'Wnorm': np.zeros((n_reg,1)),               # normalized projection vectors
-			'U': np.eye(n_reg,n_in),                    # reduction of input space
-			'H': np.zeros((n_reg, n_out)),          # trace matrix
-			'r': np.zeros((n_reg,1)),                   # trace vector
-			'sum_w': np.ones((n_reg))*1.e-10,         # the sum of weights
-			'sum_e_cv2i': np.zeros((n_reg)),          # weighted sum of cross.valid. err. per dim
-			'sum_e_cv2': 0,                             # weighted sum of cross.valid. err. of final output
-			'sum_e2': 0,                                # weighted sum of error (not CV)
-			'n_data': np.ones((n_reg,1))*1.e-10,        # discounted amount of data in '			'trustworthy' : 0,                         # indicates statistical confidence
-			'trustworthy': 0,                           # statistical confidence
-			'lamb': np.ones((n_reg,1))*self.ID.init_lambda,# forgetting rate
-			'mean_x': np.zeros((n_in,1)),               # the weighted mean of inputs
-			'var_x': np.zeros((n_in,1)),                # the weighted variance of inputs
-			'w': 0,                                     # store the last computed weight
-			's': np.zeros((n_reg,1)),                   # store the projection of inputs
-			'n_dofs': 0,                                # the local degrees of freedom
-		}
+					'B': np.zeros((n_reg, self.ID.n_out)),      # the regression parameters
+					'c': c,                                     # the center of the '			'SXresYres'   : zeros(n_reg,n_in),         # needed to compute projections
+					'SXresYres':  np.zeros((n_reg, n_in)),      # needed to compute projections
+					'ss2': np.ones((n_reg,1))/self.ID.init_P, 		# variance per projection
+					'SSYres': np.zeros((n_reg, n_out)),     # needed to compute linear model
+					'SSXres': np.zeros((n_reg,n_in)),           # needed to compute input reduction
+					'W': np.eye(n_reg,n_in),                    # matrix of projections vectors
+					'Wnorm': np.zeros((n_reg,1)),               # normalized projection vectors
+					'U': np.eye(n_reg,n_in),                    # reduction of input space
+					'H': np.zeros((n_reg, n_out)),          # trace matrix
+					'r': np.zeros((n_reg,1)),                   # trace vector
+					'sum_w': np.ones((n_reg))*1.e-10,         # the sum of weights
+					'sum_e_cv2i': np.zeros((n_reg)),          # weighted sum of cross.valid. err. per dim
+					'sum_e_cv2': 0,                             # weighted sum of cross.valid. err. of final output
+					'sum_e2': 0,                                # weighted sum of error (not CV)
+					'n_data': np.ones((n_reg,1))*1.e-10,        # discounted amount of data in '			'trustworthy' : 0,                         # indicates statistical confidence
+					'trustworthy': 0,                           # statistical confidence
+					'lamb': np.ones((n_reg,1))*self.ID.init_lambda,# forgetting rate
+					'mean_x': np.zeros((n_in,1)),               # the weighted mean of inputs
+					'var_x': np.zeros((n_in,1)),                # the weighted variance of inputs
+					'w': 0,                                     # store the last computed weight
+					's': np.zeros((n_reg,1)),                   # store the projection of inputs
+					'n_dofs': 0,                                # the local degrees of freedom
+				}
 		if isinstance(rf, dict):
 			rf['h'] = np.zeros_like(rf['alpha']),        # a memory term for 2nd order gradients
 			rf['b'] = math.log(rf['alpha']+1.e-10),      # a memory term for 2nd order gradients
@@ -420,8 +419,9 @@ class LWPR(object):
 		rf.s, xres  = self.compute_projection(x, rf.W, rf.U)
 
 		# compute all residual errors and targets at all projection stages
-		yres  = rf.B * (rf.s * np.ones((1,n_out)))
+		yres  = rf.B * rf.s.dot(np.ones((1, n_out)))
 		print('yres: ', yres)
+
 		for i in range(1, n_reg):
 		  yres[i,:] = yres[i,:] + yres[i-1,:]
 
@@ -672,12 +672,6 @@ class LWPR(object):
 			based on sufficient data
 		"""
 
-		# print('rf.sum_e_cv2i: ', rf.sum_e_cv2i.flatten(), ' rf.sum_w: ', rf.sum_w.flatten())
-		# print('n_reg: ', n_reg)
-		# mse_n_reg   = rf.sum_e_cv2i[n_reg]   / rf.sum_w[n_reg] + 1.e-10
-		# mse_n_reg_1 = rf.sum_e_cv2i[n_reg-1] / rf.sum_w[n_reg-1] + 1.e-10
-		# rf.sum_w   	 	= rf.sum_w.flatten()
-		# rf.sum_e_cv2i   = rf.sum_e_cv2i.flatten()
 		n_reg           -= 1
 
 		mse_n_reg   	= rf.sum_e_cv2i[n_reg]   / rf.sum_w[n_reg] + 1.e-10
