@@ -65,9 +65,9 @@ def test_lwpr_1D(s):
             lwpr_obj.initializations('Update', ID, X[inds[i]], Y[inds[i]])
             yp, w, _  = lwpr_obj.output
             mse       = mse + (Y[inds[i]] - yp)**2;
-            # print('yp: %.4f, w: %.4f, mse: %.4f'%(yp, w, mse))
         nMSE = mse/n/(np.var(Y)/len(Y));
-        print('#Data=%d #rfs=%d nMSE={%5:.3f} (TrainingSet)'.format(lwpr_obj.n_data,len(lwpr_obj.rfs),nMSE))
+        print('#Data={} #rfs={} nMSE={} {}'
+                .format(lwpr_obj.ID.n_data, len(lwpr_obj.ID.rfs), nMSE, '(TrainingSet)'))
 
     # create predictions for the test data
     Yp   = np.zeros(Yt.shape)
