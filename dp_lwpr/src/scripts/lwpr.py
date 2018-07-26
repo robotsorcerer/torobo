@@ -141,7 +141,7 @@ class LWPR(object):
 			wv        = np.zeros((3))
 			iv        = np.zeros((3))
 			yp        = np.zeros((1)) if y.ndim is 0 else np.zeros(y.shape)
-			# print('y outer ', yp, yp.shape)
+
 			sum_w     = 0
 			sum_n_reg = 0
 			tms       = []
@@ -168,14 +168,10 @@ class LWPR(object):
 					# update the regression
 					rf,yp_i,e_cv,e = self.update_regression(rf,xmz,ymz,w)
 
-					print('y:    ', yp)
-					print('yp_i: ', yp_i)
-					time.sleep(0.4)
-
+					# print('yp: {}, yp_i: {}, w: {}'.format(yp, yp_i, w))
 					if (rf.trustworthy):
-					  yp    = w.dot(yp_i) + yp
+					  yp    = w.dot(yp_i.T) + yp
 					  sum_w += w
-
 
 					# update simple statistical variables
 					rf.sum_w  = rf.sum_w   * rf.lamb + w
@@ -282,10 +278,12 @@ class LWPR(object):
 				  # confidence intervals if needed
 				  if (compute_conf):
 					  dofs = self.ID.rfs[i].sum_w[0]-self.ID.rfs[i].n_dofs
-					  if self.conf_method == 'std':
+					  if self.ID.conf_method == 'std':
+						  print('self.ID.rfs[i].sum_e2: {}\n dofs:{} s: {}, self.ID.rfs[i].ss2: {}, w: {}'
+						    .format(self.ID.rfs[i].sum_e2, dofs, s, self.ID.rfs[i].ss2, w))
 						  sum_conf = sum_conf + w*self.ID.rfs[i].sum_e2/dofs*(1+(s/self.ID.rfs[i].ss2).T.dot(s).dot(w))
-					  elif self.conf_method ==  't-test':
-						  sum_conf = sum_conf + tinv(0.975,dofs)**2*w*self.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
+					  elif self.ID.conf_method ==  't-test':
+						  sum_conf = sum_conf + scipy.stats.t.ppf(0.975,dofs)**2*w*self.ID.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
 
 			# the final prediction
 			if (sum_w > 0):
@@ -414,18 +412,19 @@ class LWPR(object):
 		n_reg, n_in = rf.W.shape
 		n_out       = len(y)
 
-		print('y: {}, n_out: {}'.format(y, n_out))
+		# print('y: {}, n_out: {}'.format(y, n_out))
 
 		rf.s, xres  = self.compute_projection(x, rf.W, rf.U)
 
 		# compute all residual errors and targets at all projection stages
 		yres  = rf.B * rf.s.dot(np.ones((1, n_out)))
-		print('yres: ', yres)
+
 
 		for i in range(1, n_reg):
 		  yres[i,:] = yres[i,:] + yres[i-1,:]
 
 		yres        = np.ones((n_reg,1)).dot(y.T) - yres
+		# print('yres: ', yres)
 		e_cv        = yres
 		ytarget     = np.c_[y, yres[0, slice(0, n_reg)]]
 
