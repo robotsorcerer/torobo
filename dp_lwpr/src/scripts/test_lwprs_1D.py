@@ -72,11 +72,12 @@ def test_lwpr_1D(s):
     Yp   = np.zeros(Yt.shape)
     Conf = np.zeros(Yt.shape)
     for i in range(len(Xt)):
-        lwpr_obj = lwpr_obj.initializations('Predict', ID, Xt[i].T, 0.001)
+        lwpr_obj.initializations('Predict', ID, Xt[i].T, 0.001)
         yp, w, conf = lwpr_obj.output
 
-    Yp[0,i] = yp
-    Conf[i,0] = conf
+        print('Yp, {} yp: {} w: {}, conf: {}'.format(Yp.shape, yp, w, conf))
+        Yp[i] = yp
+        Conf[i] = conf
 
     ep   = Yt-Yp
     mse  = np.mean(ep**2)

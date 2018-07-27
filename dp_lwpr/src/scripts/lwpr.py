@@ -267,7 +267,7 @@ class LWPR(object):
 				  xmz = xn - self.ID.rfs[i].mean_x
 
 				  # compute the projected inputs
-				  s = self.compute_projection(xmz,self.ID.rfs[i].W,self.ID.rfs[i].U);
+				  s, xres = self.compute_projection(xmz,self.ID.rfs[i].W,self.ID.rfs[i].U);
 
 				  # the prediction
 				  aux     = self.ID.rfs[i].B.T.dot(s) + self.ID.rfs[i].b0
@@ -279,8 +279,8 @@ class LWPR(object):
 				  if (compute_conf):
 					  dofs = self.ID.rfs[i].sum_w[0]-self.ID.rfs[i].n_dofs
 					  if self.ID.conf_method == 'std':
-						  print('self.ID.rfs[i].sum_e2: {}\n dofs:{} s: {}, self.ID.rfs[i].ss2: {}, w: {}'
-						    .format(self.ID.rfs[i].sum_e2, dofs, s, self.ID.rfs[i].ss2, w))
+						  # print('self.ID.rfs[i].sum_e2: {}\n dofs:{} s: {}, self.ID.rfs[i].ss2: {}, w: {}'
+						  #   .format(self.ID.rfs[i].sum_e2, dofs, s, self.ID.rfs[i].ss2, w))
 						  sum_conf = sum_conf + w*self.ID.rfs[i].sum_e2/dofs*(1+(s/self.ID.rfs[i].ss2).T.dot(s).dot(w))
 					  elif self.ID.conf_method ==  't-test':
 						  sum_conf = sum_conf + scipy.stats.t.ppf(0.975,dofs)**2*w*self.ID.rfs[i].sum_e2/dofs*(1+(s/self.rfs[i].ss2).T.dot(s).dot(w))
@@ -293,10 +293,10 @@ class LWPR(object):
 				yp 	    = yp * self.ID.norm_out
 				conf 	= conf * self.ID.norm_out
 
-			self.output      = [yp, max_w]
+			self.output      = yp, max_w
 
 			if compute_conf:
-				self.output += [conf]
+				self.output = yp, max_w, conf
 
 		elif action == 'Structure':
 			self.ID = LWPRID(*args)
