@@ -6,4 +6,4 @@
 	url = git@github.com:lakehanne/StatisticalLearning
 [submodule "lwpr"]
 	path = lwpr
-	url = https://github.com/jdlangs/lwpr
+	url = https://github.com/lakehanne/lwpr
