@@ -6,8 +6,8 @@
 	url = git@github.com:lakehanne/StatisticalLearning
 [submodule "lwpr"]
 	path = lwpr
-	url = https://github.com/lakehanne/lwpr
+	url = git@github.com/lakehanne/lwpr
 	branch = ubuntu18
 [submodule "dmpbbo"]
 	path = dmpbbo
-	url = https://github.com/stulp/dmpbbo.git
+	url = git@github.com:lakehanne/dmpbbo.git
