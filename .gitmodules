@@ -7,3 +7,4 @@
 [submodule "lwpr"]
 	path = lwpr
 	url = https://github.com/lakehanne/lwpr
+	branch = ubuntu18
