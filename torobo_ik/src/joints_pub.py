@@ -3,7 +3,7 @@
 import rospy
 import rospkg
 from rospy.numpy_msg import numpy_msg
-from trac_ik_torobo.msg import Numpy64
+from torobo_ik.msg import Numpy64
 
 import os
 import numpy as np
