@@ -14,8 +14,6 @@
 
 #include <mutex>
 #include <Eigen/Core>
-#include <trac_ik_torobo/ik_solver.h>
-#include <trac_ik_torobo/Numpy64.h>
 #include <boost/filesystem.hpp>
 
 // ik headers
@@ -23,7 +21,9 @@
 #include <sensor_msgs/JointState.h>
 #include <kdl/chainiksolvervel_pinv.hpp>
 #include <kdl/chainiksolverpos_nr_jl.hpp>
-#include <trac_ik_torobo/SolveDiffIK.h>
+#include <torobo_ik/Numpy64.h>
+#include <torobo_ik/ik_solver.h>
+#include <torobo_ik/SolveDiffIK.h>
 
 using namespace boost::filesystem;
 using namespace pfn;
@@ -118,7 +118,7 @@ class Converter{
           sub               = nh_.subscribe("/torobo_ik/teach_joints", 10, &Converter::joints_cb, this);
           diff_ik_server_   = nh_.advertiseService("/torobo_ik/solve_diff_ik", &Converter::onSolveRequest, this);
           ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo_ik/ik_results", 100, false);
-          ik_client         = nh_.serviceClient<trac_ik_torobo::SolveDiffIK>("/torobo_ik/solve_diff_ik");
+          ik_client         = nh_.serviceClient<torobo_ik::SolveDiffIK>("/torobo_ik/solve_diff_ik");
       }
 
       ~Converter() { }
@@ -167,7 +167,7 @@ private:
         return kdl_tree;
       }
 
-    bool onSolveRequest(trac_ik_torobo::SolveDiffIK::Request & req, trac_ik_torobo::SolveDiffIK::Response & res)
+    bool onSolveRequest(torobo_ik::SolveDiffIK::Request & req, torobo_ik::SolveDiffIK::Response & res)
     {
     		KDL::JntArray q_in(cols);
     		KDL::JntArray q_out(cols);
@@ -199,7 +199,7 @@ private:
     		return !res.q_out.empty();
      }
 
-    void joints_cb(const trac_ik_torobo::Numpy64::ConstPtr& np_msg)
+    void joints_cb(const torobo_ik::Numpy64::ConstPtr& np_msg)
     {
         Eigen::MatrixXd RawJoints;
         // raw joints contain the indices of time as well as the seven joint angles

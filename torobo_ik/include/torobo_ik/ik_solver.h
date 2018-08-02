@@ -4,7 +4,7 @@
 #include <dr_kdl/dr_kdl.hpp>
 #include <sensor_msgs/JointState.h>
 #include <kdl/chainiksolvervel_pinv.hpp>
-#include <trac_ik_torobo/SolveDiffIK.h>
+#include <torobo_ik/SolveDiffIK.h>
 
 namespace pfn{
 
@@ -22,7 +22,7 @@ namespace pfn{
       friend class Converter; // fwd declaration
   public:
     IKVelocitySolver(ros::NodeHandle nh);
-    bool onSolveRequest(trac_ik_torobo::SolveDiffIK::Request & req, trac_ik_torobo::SolveDiffIK::Response & res);
+    bool onSolveRequest(torobo_ik::SolveDiffIK::Request & req, torobo_ik::SolveDiffIK::Response & res);
 
   };
 
