@@ -40,11 +40,22 @@ generate_messages(
 
 catkin_package(
   CATKIN_DEPENDS
-    trac_ik_lib std_msgs message_runtime geometry_msgs roslib
+    message_runtime
+    trac_ik_lib
+    std_msgs
+    geometry_msgs
+    roslib
   DEPENDS
     Boost
     orocos_kdl
 )
+
+message(STATUS "\n\nExported Target:  ${${PROJECT_NAME}_EXPORTED_TARGETS}")
+
+#add_dependencies(ik_sub ${${PROJECT_NAME}_EXPORTED_TARGETS})
+#add_custom_target(OUTPUT SolveDiffIK.h
+#                  DEPENDS ${${PROJECT_NAME}_EXPORTED_TARGETS})
+#add_custom_target(OUTPUT SolveDiffIK.h  DEPENDS ik_sub)
 
 include_directories(include)
 include_directories(
@@ -54,7 +65,6 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS}
 )
 
-#add_dependencies(ik_sub ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 macro(add_exec name)
   add_executable(${name} src/${name}.cpp)
@@ -75,11 +85,9 @@ target_link_libraries(ik_sub ${catkin_LIBRARIES} ${Boost_LIBRARIES}
 											${EIGEN3_LIBRARIES} ${orocos_kdl_LIBRARIES}
 											${Boost_FILESYSTEM_LIBRARY}
 											-lm -ldl)
-
 # add_exec(torobo_ik)
 
-
-
+add_dependencies(ik_sub  ${catkin_EXPORTED_TARGETS})
 
 install(DIRECTORY launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
