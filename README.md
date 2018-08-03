@@ -39,11 +39,14 @@ This codebase represents a wip for our proposed learning stable control laws for
 
     `roslaunch  torobo_ik torobo.launch bringup:=true`
 
-    In addition, one can turn off the stdout printouts by appending the arg `disp:=true` to the `torobo.launch` file.
+    In addition, one can turn off the stdout printouts by appending the arg `disp:=true` to the `torobo.launch` file e.g.,
+
+
+    `roslaunch  torobo_ik torobo.launch bringup:=true disp:=false
 
 + Launch the Lyapunov Learner Executor
 
   In a separate terminal, launch the robot executor.
-  
+
     `cd /path_to_root_folder/lyapunovlearner/scripts`
     `python main.py`
