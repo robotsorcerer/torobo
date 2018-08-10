@@ -1,11 +1,17 @@
 ### Header Info
 
 __author__ 		   = "Olalekan Ogunmolu"
+
 __copyright__ 	 = "2018, One Hell of a Lyapunov Solver"
+
 __credits__  	   = "Rachel Thompson (MIT), Jethro Tan (PFN)"
+
 __license__ 	   = "MIT"
+
 __maintainer__ 	 = "Olalekan Ogunmolu"
+
 __email__ 		   = "patlekano@gmail.com"
+
 __status__ 		   = "Testing"
 
 
