@@ -4,7 +4,7 @@ __author__ 		   = "Olalekan Ogunmolu"
 
 __copyright__ 	 = "2018, One Hell of a Lyapunov Solver"
 
-__credits__  	   = "Rachel Thompson (MIT), Jethro Tan (PFN)"
+__credits__  	   = "Rachel Thompson (MIT), Jethro Tan (PFN), Ayaka Kume (PFN)"
 
 __license__ 	   = "MIT"
 
