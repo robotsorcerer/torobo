@@ -10,7 +10,7 @@ __license__ 	   = "MIT"
 
 __maintainer__ 	 = "Olalekan Ogunmolu"
 
-__email__ 		   = "patlekano@gmail.com"
+__email__ 		   = "lexilighty@gmail.com"
 
 __status__ 		   = "Testing"
 
@@ -59,7 +59,7 @@ This codebase represents a wip for our proposed learning stable control laws for
     In addition, one can turn off the stdout printouts by appending the arg `disp:=true` to the `torobo.launch` file e.g.,
 
 
-    `roslaunch  torobo_ik torobo.launch bringup:=true disp:=false
+    `roslaunch  torobo_ik torobo.launch bringup:=true disp:=false`
 
 + Launch the Lyapunov Learner Executor
 
