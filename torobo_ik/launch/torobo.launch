@@ -7,6 +7,7 @@
   <arg name="bringup" default="false" /> <!-- bring up in a different terminal -->
   <arg name="saved" default="false" /> <!-- to save only once. This is turned to true in convert function -->
   <arg name="disp" default="true" />  <!-- bprint to stdout -->
+  <arg name="data_file" default="cart_pos.csv" />
 
   <group if="$(arg bringup)" >
     <!-- launch moveit server -->
@@ -23,6 +24,7 @@
     <param name="timeout" value="$(arg timeout)"/>
     <param name="saved" value="$(arg saved)"/>
     <param name="disp" value="$(arg disp)"/>
+    <param name="data_file" value="$(arg data_file)"/>
     <param name="save_to_file" value="$(arg save_to_file)"/>
     <param name="urdf_param" value="/robot_description"/>
   </node>
