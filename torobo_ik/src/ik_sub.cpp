@@ -14,6 +14,7 @@
 
 #include <mutex>
 #include <Eigen/Core>
+#include <boost/cerrno.hpp>
 #include <boost/filesystem.hpp>
 
 // ik headers
@@ -68,7 +69,7 @@ class Converter{
     Eigen::MatrixXd RawJoints;
     unsigned long const hardware_concurrency;
     ros::AsyncSpinner spinner;
-    std::string save_path;
+    std::string save_path, data_file;
     std::ofstream cartPosFile;
     bool running, updateJoints;
     int rows, cols, counter;
@@ -98,18 +99,22 @@ class Converter{
   public:
       Converter()
       :hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
-      cartPosFile(save_path), running(false), updateJoints(false), rows(10001), cols(7), counter(0)
+      cartPosFile(save_path, std::ios::binary), running(false), updateJoints(false), cols(7), counter(0)
       {
-          nh_.getParam("/torobo_ik/chain_start", base_link);
-          nh_.getParam("/torobo_ik/chain_end", tip_link);
-          nh_.getParam("/torobo_ik/save_to_file", save_to_file);
           nh_.getParam("/torobo_ik/disp", disp);
           nh_.getParam("/torobo_ik/saved", saved);
+          nh_.getParam("/torobo_ik/chain_end", tip_link);
+          nh_.getParam("/torobo_ik/data_file", data_file);
+          nh_.getParam("/torobo_ik/chain_start", base_link);
+          nh_.getParam("/torobo_ik/save_to_file", save_to_file);
 
           getROSPackagePath("lyapunovlearner", data_dir);
-          data_dir  = data_dir / "scripts" / "data" / "cart_pos.csv";
+          data_dir  = data_dir / "scripts" / "data" / data_file;
           save_path = data_dir.c_str();
-          ROS_INFO_STREAM("save_path " << save_path);
+          ROS_INFO_STREAM("\n\nsave_path " << save_path);
+          // ROS_INFO_STREAM(" cartPosFile " << cartPosFile);
+
+          // cartPosFile(save_path, std::ios::binary), 
 
           get_kdl_tree();
 
@@ -204,6 +209,7 @@ private:
         Eigen::MatrixXd RawJoints;
         // raw joints contain the indices of time as well as the seven joint angles
         // per time during the teaching motion
+        rows = np_msg->data.size()/cols;
         this->RawJoints.resize(rows, cols);
 
         RawJoints.resize(rows, cols);
@@ -211,19 +217,20 @@ private:
         {
           for (auto j =0; j < cols; ++j)  // get only joint positions
           {
-            RawJoints(i, j) = np_msg->data[i*cols+j+1];
+            RawJoints(i, j) = np_msg->data[i*cols+j];
           }
           TimeIdx.push_back(np_msg->data[i*cols]);
         }
 
-        if(disp)
-        {
-          ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, cols, cols));
-        }
+        // if(disp)
+        // {
+        //   ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, cols, cols));
+        // }
 
         std::lock_guard<std::mutex> lock(mutex);
         this->RawJoints = RawJoints;
         updateJoints = true;
+        ++counter;
     }
 
     void convert()
@@ -244,7 +251,9 @@ private:
             {
               if(!saved)
               {
+                ROS_INFO("saving calculated cart data to file");
                 save_cart_data();
+                ROS_INFO("Finished saving calculated cart data to file");
               }
             }
               updateJoints = false;
@@ -270,10 +279,8 @@ private:
           boost::posix_time::time_duration diff;
 
           int num_waypts = saved_joints.rows();
-          if (disp)
-            ROS_INFO("num_jts: %d, rows [%d]", num_jts, num_waypts );
 
-          for (auto i=0; i < num_waypts; i++)
+          for (auto i=0; i < saved_joints.rows(); i++)
           {
               KDL::JntArray q(num_jts);
               for (int j=0; j<cols; j++)
@@ -331,7 +338,9 @@ private:
       auto itPos = CartPosList.begin();
       auto itVel = CartVelList.begin();
 
-      while(itPos != CartPosList.end() && itVel != CartVelList.end())
+      std::ofstream cartPosFile(save_path, std::ios::binary);
+
+      while(itPos != CartPosList.end()+1 && itVel != CartVelList.end()+1)
       {
           Eigen::Vector3d vel = *itVel;
           if(disp)
@@ -339,6 +348,7 @@ private:
             ROS_INFO("[x, y, z, xd, yd, zd]: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f]", \
                       itPos->p.x(), itPos->p.y(), itPos->p.z(),
                       vel[0], vel[1], vel[2]  );
+            // ROS_INFO("filename: %s", save_path.c_str());
           }
           cartPosFile << itPos->p.x() << ", " << itPos->p.y() << ", " <<  itPos->p.z() <<
                       ", " << vel[0] << ", " << vel[1] << ", " << vel[2] << "\n";
@@ -347,24 +357,31 @@ private:
            ++itVel;
       }
       saved = true;
+    } 
+
+    // ripped off: https://www.boost.org/doc/libs/1_39_0/libs/filesystem/test/operations_test.cpp
+    void create_file( const boost::filesystem::path & ph, const std::string & contents )
+    {
+      std::ofstream f( ph.c_str() );
+      if ( !contents.empty() ) f << contents;
     }
 
     bool check_file_exists()
     {
         path p(save_path);
-        if(exists(p))
+        if(boost::filesystem::is_regular_file(p))
         {
-          if(is_regular_file(p))
-          {
-            boost::filesystem::remove(save_path);
-          }
+          boost::filesystem::remove(save_path);
+          ROS_WARN("File already in directory : %s. Removing it", save_path.c_str());
           return true;
         }
-        else
-        {
-          boost::filesystem::ofstream(save_path);  // create the empty file
-          return false;
-        }
+      else
+      {
+        ROS_INFO("Creating new file in directory: %s", save_path.c_str());
+        // boost::filesystem::ofstream(save_path);  // create the empty file
+        create_file(save_path, "");
+        return false;
+      }
     }
 };
 

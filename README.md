@@ -4,13 +4,13 @@ __author__ 		   = "Olalekan Ogunmolu"
 
 __copyright__ 	 = "2018, One Hell of a Lyapunov Solver"
 
-__credits__  	   = "Rachel Thompson (MIT), Jethro Tan (PFN)"
+__credits__  	   = "Rachel Thompson (MIT), Jethro Tan (PFN), Ayaka Kume (PFN)"
 
 __license__ 	   = "MIT"
 
 __maintainer__ 	 = "Olalekan Ogunmolu"
 
-__email__ 		   = "patlekano@gmail.com"
+__email__ 		   = "lexilighty@gmail.com"
 
 __status__ 		   = "Testing"
 
@@ -59,7 +59,7 @@ This codebase represents a wip for our proposed learning stable control laws for
     In addition, one can turn off the stdout printouts by appending the arg `disp:=true` to the `torobo.launch` file e.g.,
 
 
-    `roslaunch  torobo_ik torobo.launch bringup:=true disp:=false
+    `roslaunch  torobo_ik torobo.launch bringup:=true disp:=false`
 
 + Launch the Lyapunov Learner Executor
 
