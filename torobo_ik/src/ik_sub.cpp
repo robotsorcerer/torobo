@@ -22,6 +22,7 @@
 #include <sensor_msgs/JointState.h>
 #include <kdl/chainiksolvervel_pinv.hpp>
 #include <kdl/chainiksolverpos_nr_jl.hpp>
+#include <kdl/chainfksolvervel_recursive.hpp>
 #include <torobo_ik/Numpy64.h>
 #include <torobo_ik/ik_solver.h>
 #include <torobo_ik/SolveDiffIK.h>
@@ -78,7 +79,7 @@ class Converter{
     KDL::Tree kdl_tree;
     bool disp, saved, save_to_file;
     std::vector<KDL::Frame> CartPosList;
-    std::vector<Eigen::Vector3d> CartVelList;
+    std::vector<KDL::FrameVel> CartVelList;
     std::vector<double> TimeIdx;
 
     // IK Solver Members
@@ -99,7 +100,7 @@ class Converter{
   public:
       Converter()
       :hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
-      cartPosFile(save_path, std::ios::binary), running(false), updateJoints(false), cols(7), counter(0)
+      cartPosFile(save_path, std::ios::binary), running(false), updateJoints(false), cols(14), counter(0)      
       {
           nh_.getParam("/torobo_ik/disp", disp);
           nh_.getParam("/torobo_ik/saved", saved);
@@ -222,15 +223,15 @@ private:
           TimeIdx.push_back(np_msg->data[i*cols]);
         }
 
-        // if(disp)
-        // {
-        //   ROS_INFO_STREAM("RawJoints \n" << RawJoints.block(0, 0, cols, cols));
-        // }
-
         std::lock_guard<std::mutex> lock(mutex);
         this->RawJoints = RawJoints;
         updateJoints = true;
         ++counter;
+
+        // if (disp){
+        //   // ROS_INFO_STREAM("RawJoints size: " << RawJoints.rows() << "," << RawJoints.cols());
+        //   // ROS_INFO_STREAM("Raw Joints [slice(10, 15), slice(7, 14)]: \n" << RawJoints.block(10, 6, 15, 13));
+        // }
     }
 
     void convert()
@@ -244,16 +245,20 @@ private:
             std::lock_guard<std::mutex> lock(mutex);
             saved_joints = this->RawJoints;
             int cols = saved_joints.cols();
+            int rows = saved_joints.rows();
 
-            calculate_pos(saved_joints);
-            calculate_vel();
+            auto temp = saved_joints.block(0, 0, rows, 7);
+            // ROS_INFO_STREAM("temp: " << temp.rows() << ", " << temp.cols());
+
+            calculate_pos(temp);
+            calculate_vel(saved_joints);
             if(save_to_file)
             {
               if(!saved)
               {
                 ROS_INFO("saving calculated cart data to file");
                 save_cart_data();
-                ROS_INFO("Finished saving calculated cart data to file");
+                ROS_INFO("Finished saving calculated cart data to [%s]", save_path);
               }
             }
               updateJoints = false;
@@ -261,79 +266,94 @@ private:
       }
     }
 
-    void calculate_pos(Eigen::MatrixXd const& saved_joints)
+    void calculate_pos(Eigen::MatrixXd const& saved_pos)
     {
-          KDL::Chain *chain = this->chain.get(); // returns a pointer to the stored object
+      KDL::Chain *chain = this->chain.get(); // returns a pointer to the stored object
+      // Set up KDL IK
+      KDL::ChainFkSolverPos_recursive fk_solver  = KDL::ChainFkSolverPos_recursive(*chain); // Forward kin. solver
 
-          // Set up KDL IK
-          KDL::ChainFkSolverPos_recursive fk_solver  = KDL::ChainFkSolverPos_recursive(*chain); // Forward kin. solver
-          KDL::ChainIkSolverVel_pinv vik_solver      = KDL::ChainIkSolverVel_pinv(*chain);      // PseudoInverse vel solver
+      double elapsed = 0;
+      KDL::Frame cartpos;
+      bool kinematics_status = false;
+      double timeout = 0.005;
+      unsigned int num_jts = chain->getNrOfJoints();
 
-          double elapsed = 0;
-          KDL::Frame cartpos;
-          bool kinematics_status = false;
-          double timeout = 0.005;
-          unsigned int num_jts = chain->getNrOfJoints();
+      boost::posix_time::ptime start_time;
+      boost::posix_time::time_duration diff;
 
-          boost::posix_time::ptime start_time;
-          boost::posix_time::time_duration diff;
+      // ROS_INFO("pos rows: %d pos cols: %d ", saved_pos.rows(), saved_pos.cols());
 
-          int num_waypts = saved_joints.rows();
-
-          for (auto i=0; i < saved_joints.rows(); i++)
+      for (auto i=0; i < saved_pos.rows(); i++)
+      {
+          KDL::JntArray q(num_jts);
+          for (int j=0; j<saved_pos.cols(); j++)
           {
-              KDL::JntArray q(num_jts);
-              for (int j=0; j<cols; j++)
-              {
-                q(j)=saved_joints(i, j);
-              }
-
-              start_time = boost::posix_time::microsec_clock::local_time();
-
-              kinematics_status = fk_solver.JntToCart(q, cartpos);
-              diff = boost::posix_time::microsec_clock::local_time() - start_time;
-              elapsed = diff.total_nanoseconds() / 1e9;
-
-              this->CartPosList.push_back(cartpos);
+            q(j)=saved_pos(i, j);
           }
+
+          start_time = boost::posix_time::microsec_clock::local_time();
+
+          kinematics_status = fk_solver.JntToCart(q, cartpos);
+          diff = boost::posix_time::microsec_clock::local_time() - start_time;
+          elapsed = diff.total_nanoseconds() / 1e9;
+
+          this->CartPosList.push_back(cartpos);
       }
+    }
 
-    void calculate_vel()
+    void calculate_vel(Eigen::MatrixXd const& saved_vels)
     {
-        std::vector<KDL::Frame> CartPosList = this->CartPosList;
-        std::vector<Eigen::Vector3d> CartVelList;
-        double xdot, ydot, zdot;
 
-        int idx = 0;
-        Eigen::Vector3d CartVel;
-        for(auto it = CartPosList.cbegin(); it != CartPosList.cend()-1; ++it)
+        KDL::Chain *chain = this->chain.get(); // returns a pointer to the stored object
+        // KDL::ChainIkSolverVel_pinv vik_solver      = KDL::ChainIkSolverVel_pinv(*chain);      // PseudoInverse vel solver
+        KDL::ChainFkSolverVel_recursive vfk_solver = KDL::ChainFkSolverVel_recursive (*chain);      // PseudoInverse vel solver
+
+        double elapsed = 0;
+        KDL::FrameVel cartvel;
+        bool kinematics_status = false;
+        double timeout = 0.005;
+        unsigned int num_jts = chain->getNrOfJoints();
+        // ROS_INFO("num_jts: %d", num_jts);
+
+        boost::posix_time::ptime start_time;
+        boost::posix_time::time_duration diff;
+
+        // ROS_INFO("vel rows: %d vel cols: %d ", saved_vels.rows(), saved_vels.cols());
+
+        for (auto i=0; i < saved_vels.rows(); i++)
         {
-            if(TimeIdx[idx]==0)
-            {
-              xdot = ydot = zdot = 0.0;
-            }
-            else
-            {
-              xdot = ((it+1)->p.x() - it->p.x() ) / TimeIdx[idx];
-              ydot = ((it+1)->p.y() - it->p.y() ) / TimeIdx[idx];
-              zdot = ((it+1)->p.z() - it->p.z() ) / TimeIdx[idx];
-            }
 
-            CartVel << xdot, ydot, zdot;
-            CartVelList.push_back(CartVel);
-            ++idx;
+            KDL::JntArray q(num_jts), qdot(num_jts);
+            for (int j=0; j< num_jts; j++)
+            {
+              q(j)=saved_vels(i, j);
+            }
+            // ROS_INFO("Finbished vel fk 1");
+
+            for (int j=num_jts; j< saved_vels.cols(); j++)
+            {
+              // ROS_INFO("%d Finbished vel fk 2.1", j); 
+              qdot(j-num_jts)=saved_vels(i, j);
+            }           
+            // ROS_INFO("Finbished vel fk 2"); 
+            
+            KDL::JntArrayVel qvel = KDL::JntArrayVel(q, qdot); //(num_jts);
+
+            start_time = boost::posix_time::microsec_clock::local_time();
+
+            kinematics_status = vfk_solver.JntToCart(qvel, cartvel);
+            diff = boost::posix_time::microsec_clock::local_time() - start_time;
+            elapsed = diff.total_nanoseconds() / 1e9;
+
+            this->CartVelList.push_back(cartvel);
         }
-        auto it = CartPosList.cend();
-        // append the last element
-        CartVelList.back() <<  it->p.x(), it->p.y(), it->p.z();  // should be zero anyway
-        this->CartVelList  = CartVelList;
     }
 
     void save_cart_data()
     {
       // check_file_exists();
       std::vector<KDL::Frame> CartPosList = this->CartPosList;
-      std::vector<Eigen::Vector3d> CartVelList = this->CartVelList;
+      std::vector<KDL::FrameVel> CartVelList = this->CartVelList;
 
       auto itPos = CartPosList.begin();
       auto itVel = CartVelList.begin();
@@ -342,21 +362,20 @@ private:
 
       while(itPos != CartPosList.end()+1 && itVel != CartVelList.end()+1)
       {
-          Eigen::Vector3d vel = *itVel;
+          KDL::Twist twist = itVel->GetTwist();
           if(disp)
           {
-            ROS_INFO("[x, y, z, xd, yd, zd]: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f]", \
-                      itPos->p.x(), itPos->p.y(), itPos->p.z(),
-                      vel[0], vel[1], vel[2]  );
-            // ROS_INFO("filename: %s", save_path.c_str());
+            ROS_INFO("[x:, y:, z, xd:, yd:, zd:]: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f", 
+                      itPos->p.x(), itPos->p.y(), itPos->p.z(), twist[0], twist[1], twist[2]  );
           }
-          cartPosFile << itPos->p.x() << ", " << itPos->p.y() << ", " <<  itPos->p.z() <<
-                      ", " << vel[0] << ", " << vel[1] << ", " << vel[2] << "\n";
+          cartPosFile << itPos->p.x() << "," << itPos->p.y() << "," << itPos->p.z() << "," 
+                      << twist[0] << "," << twist[1] << "," << twist[2] << "\n";
 
            ++itPos;
            ++itVel;
       }
       saved = true;
+      ROS_INFO_STREAM("save_path: " << save_path);
     } 
 
     // ripped off: https://www.boost.org/doc/libs/1_39_0/libs/filesystem/test/operations_test.cpp

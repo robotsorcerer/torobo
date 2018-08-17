@@ -67,3 +67,16 @@ This codebase represents a wip for our proposed learning stable control laws for
 
     `cd /path_to_root_folder/lyapunovlearner/scripts`
     `python main.py`
+
+
+### Update: Aug 16, 2018. Tokyo
+
++  CSV raw files from Torobo now in [lyapunovlearner/scripts/data/aug_16](lyapunovlearner/scripts/data/aug_16) folder
+
+  - Note that these files represent each motion for the same sinusoidal stuff for the robot. The data was collected in joint space.
+
+  - They have been augmented with the target position in the files to make the data uniform across all demos. See the scripts in [torobo_ik/src/joints_pub.py](torobo_ik/src/joints_pub.py)
+
+  - The joint space data collected was converted to cartesian workspace coordinates  using the KDL library. This is saved in [lyapunovlearner/scripts/data/cart_pos_new.csv](lyapunovlearner/scripts/data/cart_pos_new.csv)
+
++ We use the cartesian coordinates of the data collected in teaching the robot to repeat the motion.
