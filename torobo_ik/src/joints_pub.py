@@ -26,9 +26,9 @@ def prepro(file_path):
     for name in names_other:
         with open(join(file_path, name), 'r+') as f:
             data = f.readlines()
-            
-        moplan_data = [x.split("\n") for x in data]  
-        
+
+        moplan_data = [x.split("\n") for x in data]
+
         proper_data = []
         for i in range(0, len(moplan_data), 3):
             if not moplan_data[i]:
@@ -50,7 +50,7 @@ def prepro(file_path):
             proper_data.append(to_append)
 
         proper_data = np.array(proper_data)
-        
+
         raw_data[name] = proper_data
 
     #find max row in all of gathered data and extend accordingly
@@ -65,7 +65,7 @@ def prepro(file_path):
                 temp[data.shape[0]:, :data.shape[1]] = data[-1]
                 raw_data[keys] = temp
 
-    print('verifying consistency of data')
+    #print('verifying consistency of data')
     i = 0
     for keys, data in raw_data.items():
         if data.ndim > 1:
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     data_raw = prepro(filepath)
 
-    print(data_raw.shape)
+    # print(data_raw.shape)
     data     =  np.ravel(data_raw, order='A')
     np.set_printoptions(suppress=True)
     # print(data[:70], data.shape)
