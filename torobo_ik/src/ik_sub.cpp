@@ -19,10 +19,13 @@
 
 // ik headers
 #include <std_msgs/Float64.h>
+#include <kdl/chainiksolver.hpp>
 #include <sensor_msgs/JointState.h>
+#include <kdl/chainiksolverpos_nr.hpp>
 #include <kdl/chainiksolvervel_pinv.hpp>
 #include <kdl/chainiksolverpos_nr_jl.hpp>
 #include <kdl/chainfksolvervel_recursive.hpp>
+
 #include <torobo_ik/Numpy64.h>
 #include <torobo_ik/ik_solver.h>
 #include <torobo_ik/SolveDiffIK.h>
@@ -87,8 +90,7 @@ class Converter{
     std::unique_ptr<KDL::Chain> chain;
     std::unique_ptr<KDL::ChainFkSolverPos_recursive> fk_solver;
     std::unique_ptr<KDL::ChainIkSolverVel_pinv> vik_solver;
-    /// Inverse differential kinematics solver.
-    std::unique_ptr<KDL::ChainIkSolverVel_pinv> solver_;
+    std::unique_ptr<KDL::ChainIkSolverPos_NR> pik_solver;
     /// Service server.
     ros::ServiceServer diff_ik_server_;
     ros::Publisher ik_pub_;
@@ -100,7 +102,7 @@ class Converter{
   public:
       Converter()
       :hardware_concurrency(std::thread::hardware_concurrency()), spinner(hardware_concurrency/6),
-      cartPosFile(save_path, std::ios::binary), running(false), updateJoints(false), cols(14), counter(0)      
+      cartPosFile(save_path, std::ios::binary), running(false), updateJoints(false), cols(14), counter(0)
       {
           nh_.getParam("/torobo_ik/disp", disp);
           nh_.getParam("/torobo_ik/saved", saved);
@@ -113,14 +115,12 @@ class Converter{
           data_dir  = data_dir / "scripts" / "data" / data_file;
           save_path = data_dir.c_str();
           ROS_INFO_STREAM("\n\nsave_path " << save_path);
-          // ROS_INFO_STREAM(" cartPosFile " << cartPosFile);
-
-          // cartPosFile(save_path, std::ios::binary), 
 
           get_kdl_tree();
 
-          fk_solver      = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
-          vik_solver     = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
+          fk_solver         = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
+          vik_solver        = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
+          pik_solver        = std::make_unique<KDL::ChainIkSolverPos_NR>(*this->chain.get(), *fk_solver, *vik_solver);       // PseudoInverse vel solver
           sub               = nh_.subscribe("/torobo_ik/teach_joints", 10, &Converter::joints_cb, this);
           diff_ik_server_   = nh_.advertiseService("/torobo_ik/solve_diff_ik", &Converter::onSolveRequest, this);
           ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo_ik/ik_results", 100, false);
@@ -175,23 +175,26 @@ private:
 
     bool onSolveRequest(torobo_ik::SolveDiffIK::Request & req, torobo_ik::SolveDiffIK::Response & res)
     {
-    		KDL::JntArray q_in(cols);
-    		KDL::JntArray q_out(cols);
+    		KDL::JntArray q_in(cols/2);
+    		KDL::JntArray q_out(cols/2);
     		KDL::Vector rot, trans;
 
-    		trans.x(req.desired_vel.linear.x);
-    		trans.y(req.desired_vel.linear.y);
-    		trans.z(req.desired_vel.linear.z);
-    		rot.x(req.desired_vel.angular.x);
-    		rot.y(req.desired_vel.angular.y);
-    		rot.z(req.desired_vel.angular.z);
-
-    		KDL::Twist desired_vel{trans, rot};
+    		// trans.x(req.desired_vel.linear.x);
+    		// trans.y(req.desired_vel.linear.y);
+    		// trans.z(req.desired_vel.linear.z);
+    		// rot.x(req.desired_vel.angular.x);
+    		// rot.y(req.desired_vel.angular.y);
+    		// rot.z(req.desired_vel.angular.z);
+        //
+    		// KDL::Twist desired_vel{trans, rot};
     		for (size_t i = 0; i < req.q_in.size(); i++) {
     			q_in(i) = req.q_in.at(i);
     		}
 
-    		vik_solver->CartToJnt(q_in, desired_vel, q_out);
+        KDL::Vector vec{req.desired_vel.linear.x, req.desired_vel.linear.y, req.desired_vel.linear.z} ;
+        KDL::Frame dest_frame(vec);
+    		// vik_solver->CartToJnt(q_in, desired_vel, q_out);
+        pik_solver->CartToJnt(q_in, dest_frame, q_out);
     		res.q_out.resize(q_out.rows());
     		for (size_t i = 0; i < res.q_out.size(); i++) {
     			res.q_out.at(i) = q_out(i);
@@ -328,15 +331,12 @@ private:
             {
               q(j)=saved_vels(i, j);
             }
-            // ROS_INFO("Finbished vel fk 1");
 
             for (int j=num_jts; j< saved_vels.cols(); j++)
             {
-              // ROS_INFO("%d Finbished vel fk 2.1", j); 
               qdot(j-num_jts)=saved_vels(i, j);
-            }           
-            // ROS_INFO("Finbished vel fk 2"); 
-            
+            }
+
             KDL::JntArrayVel qvel = KDL::JntArrayVel(q, qdot); //(num_jts);
 
             start_time = boost::posix_time::microsec_clock::local_time();
@@ -365,10 +365,10 @@ private:
           KDL::Twist twist = itVel->GetTwist();
           if(disp)
           {
-            ROS_INFO("[x:, y:, z, xd:, yd:, zd:]: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f", 
+            ROS_INFO("[x:, y:, z, xd:, yd:, zd:]: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f",
                       itPos->p.x(), itPos->p.y(), itPos->p.z(), twist[0], twist[1], twist[2]  );
           }
-          cartPosFile << itPos->p.x() << "," << itPos->p.y() << "," << itPos->p.z() << "," 
+          cartPosFile << itPos->p.x() << "," << itPos->p.y() << "," << itPos->p.z() << ","
                       << twist[0] << "," << twist[1] << "," << twist[2] << "\n";
 
            ++itPos;
@@ -376,7 +376,7 @@ private:
       }
       saved = true;
       ROS_INFO_STREAM("save_path: " << save_path);
-    } 
+    }
 
     // ripped off: https://www.boost.org/doc/libs/1_39_0/libs/filesystem/test/operations_test.cpp
     void create_file( const boost::filesystem::path & ph, const std::string & contents )
