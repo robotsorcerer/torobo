@@ -179,19 +179,19 @@ private:
     		KDL::JntArray q_out(cols/2);
     		KDL::Vector rot, trans;
 
-    		// trans.x(req.desired_vel.linear.x);
-    		// trans.y(req.desired_vel.linear.y);
-    		// trans.z(req.desired_vel.linear.z);
-    		// rot.x(req.desired_vel.angular.x);
-    		// rot.y(req.desired_vel.angular.y);
-    		// rot.z(req.desired_vel.angular.z);
+    		// trans.x(req.desired_pos.linear.x);
+    		// trans.y(req.desired_pos.linear.y);
+    		// trans.z(req.desired_pos.linear.z);
+    		// rot.x(req.desired_pos.angular.x);
+    		// rot.y(req.desired_pos.angular.y);
+    		// rot.z(req.desired_pos.angular.z);
         //
-    		// KDL::Twist desired_vel{trans, rot};
+    		// KDL::Twist desired_pos{trans, rot};
     		for (size_t i = 0; i < req.q_in.size(); i++) {
     			q_in(i) = req.q_in.at(i);
     		}
 
-        KDL::Vector vec{req.desired_vel.linear.x, req.desired_vel.linear.y, req.desired_vel.linear.z} ;
+        KDL::Vector vec{req.desired_pos.linear.x, req.desired_pos.linear.y, req.desired_pos.linear.z} ;
         KDL::Frame dest_frame(vec);
     		// vik_solver->CartToJnt(q_in, desired_vel, q_out);
         pik_solver->CartToJnt(q_in, dest_frame, q_out);
