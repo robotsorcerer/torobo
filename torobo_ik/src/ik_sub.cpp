@@ -23,7 +23,6 @@
 #include <sensor_msgs/JointState.h>
 #include <kdl/chainiksolverpos_nr.hpp>
 #include <kdl/chainiksolvervel_pinv.hpp>
-#include <kdl/chainiksolverpos_nr_jl.hpp>
 #include <kdl/chainfksolvervel_recursive.hpp>
 
 #include <torobo_ik/Numpy64.h>
@@ -56,9 +55,7 @@ static bool copyDirectory(const boost::filesystem::path srcPath, const boost::fi
     {
         boost::filesystem::path fn = (*dir).path().filename();
         boost::filesystem::path srcFile = (*dir).path();
-        //cout << "     Source file: " << srcFile.c_str() << endl;
         boost::filesystem::path dstFile = dstPath / fn;
-        //cout << "Destination file: " << dstFile.c_str() << endl;
         boost::filesystem::copy_file(srcFile, dstFile);
     }
     return true;
@@ -86,7 +83,6 @@ class Converter{
     std::vector<double> TimeIdx;
 
     // IK Solver Members
-    // friend class IKVelocitySolver; //friend class forward declaration
     std::unique_ptr<KDL::Chain> chain;
     std::unique_ptr<KDL::ChainFkSolverPos_recursive> fk_solver;
     std::unique_ptr<KDL::ChainIkSolverVel_pinv> vik_solver;
@@ -120,7 +116,7 @@ class Converter{
 
           fk_solver         = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
           vik_solver        = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
-          pik_solver        = std::make_unique<KDL::ChainIkSolverPos_NR>(*this->chain.get(), *fk_solver, *vik_solver);       // PseudoInverse vel solver
+          pik_solver        = std::make_unique<KDL::ChainIkSolverPos_NR>(*this->chain.get(), *fk_solver, *vik_solver, max_iter=200, eps=1e-6);       // PseudoInverse vel solver
           sub               = nh_.subscribe("/torobo_ik/teach_joints", 10, &Converter::joints_cb, this);
           diff_ik_server_   = nh_.advertiseService("/torobo_ik/solve_diff_ik", &Converter::onSolveRequest, this);
           ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo_ik/ik_results", 100, false);
@@ -175,25 +171,25 @@ private:
 
     bool onSolveRequest(torobo_ik::SolveDiffIK::Request & req, torobo_ik::SolveDiffIK::Response & res)
     {
-    		KDL::JntArray q_in(cols/2);
-    		KDL::JntArray q_out(cols/2);
+    		KDL::JntArray q_in(static_cast<int>(cols/2));
+    		KDL::JntArray q_out(static_cast<int>(cols/2));
     		KDL::Vector rot, trans;
 
-    		// trans.x(req.desired_pos.linear.x);
-    		// trans.y(req.desired_pos.linear.y);
-    		// trans.z(req.desired_pos.linear.z);
-    		// rot.x(req.desired_pos.angular.x);
-    		// rot.y(req.desired_pos.angular.y);
-    		// rot.z(req.desired_pos.angular.z);
-        //
-    		// KDL::Twist desired_pos{trans, rot};
+    		trans.x(req.desired_pos.linear.x);
+    		trans.y(req.desired_pos.linear.y);
+    		trans.z(req.desired_pos.linear.z);
+    		rot.x(req.desired_pos.angular.x);
+    		rot.y(req.desired_pos.angular.y);
+    		rot.z(req.desired_pos.angular.z);
+
+    		KDL::Twist desired_pos{trans, rot};
     		for (size_t i = 0; i < req.q_in.size(); i++) {
     			q_in(i) = req.q_in.at(i);
     		}
 
         KDL::Vector vec{req.desired_pos.linear.x, req.desired_pos.linear.y, req.desired_pos.linear.z} ;
         KDL::Frame dest_frame(vec);
-    		// vik_solver->CartToJnt(q_in, desired_vel, q_out);
+    		vik_solver->CartToJnt(q_in, desired_pos, q_out);
         pik_solver->CartToJnt(q_in, dest_frame, q_out);
     		res.q_out.resize(q_out.rows());
     		for (size_t i = 0; i < res.q_out.size(); i++) {
@@ -213,17 +209,17 @@ private:
         Eigen::MatrixXd RawJoints;
         // raw joints contain the indices of time as well as the seven joint angles
         // per time during the teaching motion
-        rows = np_msg->data.size()/cols;
-        this->RawJoints.resize(rows, cols);
+        rows = np_msg->data.size()/this->cols;
+        this->RawJoints.resize(rows, this->cols);
+        RawJoints.resize(rows, this->cols);
 
-        RawJoints.resize(rows, cols);
         for (int i=0; i < rows; ++i)
         {
-          for (auto j =0; j < cols; ++j)  // get only joint positions
+          for (auto j =0; j < this->cols; ++j)  // get only joint positions
           {
-            RawJoints(i, j) = np_msg->data[i*cols+j];
+            RawJoints(i, j) = np_msg->data[i*this->cols+j];
           }
-          TimeIdx.push_back(np_msg->data[i*cols]);
+          TimeIdx.push_back(np_msg->data[i*this->cols]);
         }
 
         std::lock_guard<std::mutex> lock(mutex);
@@ -231,10 +227,10 @@ private:
         updateJoints = true;
         ++counter;
 
-        // if (disp){
-        //   // ROS_INFO_STREAM("RawJoints size: " << RawJoints.rows() << "," << RawJoints.cols());
-        //   // ROS_INFO_STREAM("Raw Joints [slice(10, 15), slice(7, 14)]: \n" << RawJoints.block(10, 6, 15, 13));
-        // }
+        if (disp){
+          ROS_INFO_STREAM("RawJoints size: " << RawJoints.rows() << "," << RawJoints.cols());
+          ROS_INFO_STREAM("Raw Joints [slice(10, 15), slice(7, 14)]: \n" << RawJoints.block(10, 6, 15, 13));
+        }
     }
 
     void convert()
@@ -253,7 +249,7 @@ private:
             auto temp = saved_joints.block(0, 0, rows, 7);
             // ROS_INFO_STREAM("temp: " << temp.rows() << ", " << temp.cols());
 
-            calculate_pos(temp);
+            calculate_pos(temp); // cause position is first 7 cols
             calculate_vel(saved_joints);
             if(save_to_file)
             {
@@ -283,8 +279,6 @@ private:
 
       boost::posix_time::ptime start_time;
       boost::posix_time::time_duration diff;
-
-      // ROS_INFO("pos rows: %d pos cols: %d ", saved_pos.rows(), saved_pos.cols());
 
       for (auto i=0; i < saved_pos.rows(); i++)
       {
