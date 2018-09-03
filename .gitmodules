@@ -11,4 +11,3 @@
 [submodule "dmpbbo"]
 	path = dmpbbo
 	url = git@github.com:lakehanne/dmpbbo.git
-	branch = master
