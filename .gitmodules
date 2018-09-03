@@ -1,9 +1,6 @@
 [submodule "lyapunovlearner"]
 	path = lyapunovlearner
 	url = git@github.com:lakehanne/lyapunovlearner.git
-[submodule "dp_lwpr/StatisticalLearning"]
-	path = dp_lwpr/StatisticalLearning
-	url = git@github.com:lakehanne/StatisticalLearning
 [submodule "lwpr"]
 	path = lwpr
 	url = git@github.com/lakehanne/lwpr
