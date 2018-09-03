@@ -8,3 +8,6 @@
 [submodule "dmpbbo"]
 	path = dmpbbo
 	url = git@github.com:lakehanne/dmpbbo.git
+[submodule "StatisticalLearning"]
+	path = dp_lwpr/StatisticalLearning
+	url = git@github.com:lakehanne/StatisticalLearning.git
