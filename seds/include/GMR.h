@@ -24,7 +24,7 @@
 #ifndef GMR_H_
 #define GMR_H_
 
-#include "MathLib/MathLib.h"
+#include "MathLib/MathLibrary.h"
 
 #ifdef USE_MATHLIB_NAMESPACE
 namespace MathLib {

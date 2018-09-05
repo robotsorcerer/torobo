@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package>
+  <name>toroboarm_seven_robot</name>
+  <version>0.1.0</version>
+  <description>The toroboarm_seven_robot package</description>
+
+  <maintainer email="koji1989@gmail.com">vivitter</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+    <metapackage/>
+  </export>
+
+  <run_depend>toroboarm_seven_description</run_depend>
+  <run_depend>toroboarm_seven_moveit_config</run_depend>
+  <run_depend>toroboarm_seven_gazebo</run_depend>
+  <run_depend>toroboarm_seven_control</run_depend>
+
+</package>

@@ -1,0 +1,5 @@
+<launch>
+  <group ns="toroboarm/whole_arm_controller">
+	   <node name="follow_joint_trajectory" pkg="toroboarm_control" type="toroboarm_control_node" output="screen" />
+  </group>
+</launch>

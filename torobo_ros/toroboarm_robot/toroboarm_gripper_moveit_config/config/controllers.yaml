@@ -1,0 +1,20 @@
+controller_list:
+ - name: toroboarm_gripper/whole_arm_controller
+   action_ns: follow_joint_trajectory
+   type: FollowJointTrajectory
+   default: true
+   joints:
+     - first_joint
+     - second_joint
+     - third_joint
+     - fourth_joint
+     - fifth_joint
+     - sixth_joint
+     - seventh_joint
+ - name: toroboarm_gripper/gripper_controller
+   action_ns: follow_joint_trajectory
+   type: FollowJointTrajectory
+   default: true
+   joints:
+     - right_finger_joint
+     - left_finger_joint

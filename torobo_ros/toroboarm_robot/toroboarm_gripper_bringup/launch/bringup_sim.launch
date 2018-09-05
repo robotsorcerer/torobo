@@ -1,0 +1,10 @@
+<launch>
+  <include file="$(find toroboarm_gripper_gazebo)/launch/toroboarm_world.launch"/>
+
+  <include file="$(find toroboarm_gripper_control)/launch/toroboarm_gripper_control.launch"/>
+
+  <include file="$(find toroboarm_gripper_moveit_config)/launch/toroboarm_gripper_moveit_config.launch">
+    <arg name="sim" value="false"/>
+  </include>
+
+</launch>

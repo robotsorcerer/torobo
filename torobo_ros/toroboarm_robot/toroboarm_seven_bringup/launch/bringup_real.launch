@@ -1,0 +1,10 @@
+<launch>
+  <include file="$(find toroboarm_seven_driver)/launch/toroboarm_driver.launch"/>
+
+  <include file="$(find toroboarm_seven_control)/launch/toroboarm_real_control.launch"/>
+
+  <include file="$(find toroboarm_seven_moveit_config)/launch/toroboarm_moveit_config.launch">
+    <arg name="sim" value="false"/>
+  </include>
+
+</launch>

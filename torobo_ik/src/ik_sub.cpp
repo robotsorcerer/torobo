@@ -116,7 +116,7 @@ class Converter{
 
           fk_solver         = std::make_unique<KDL::ChainFkSolverPos_recursive>(*this->chain.get()); // Forward kin. solver
           vik_solver        = std::make_unique<KDL::ChainIkSolverVel_pinv>(*this->chain.get());      // PseudoInverse vel solver
-          pik_solver        = std::make_unique<KDL::ChainIkSolverPos_NR>(*this->chain.get(), *fk_solver, *vik_solver, max_iter=200, eps=1e-6);       // PseudoInverse vel solver
+          pik_solver        = std::make_unique<KDL::ChainIkSolverPos_NR>(*this->chain.get(), *fk_solver, *vik_solver, 200, 1e-6);       // PseudoInverse vel solver
           sub               = nh_.subscribe("/torobo_ik/teach_joints", 10, &Converter::joints_cb, this);
           diff_ik_server_   = nh_.advertiseService("/torobo_ik/solve_diff_ik", &Converter::onSolveRequest, this);
           ik_pub_           = nh_.advertise<sensor_msgs::JointState>("/torobo_ik/ik_results", 100, false);

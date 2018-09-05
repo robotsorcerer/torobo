@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package>
+  <name>toroboarm_gripper_description</name>
+  <version>0.0.0</version>
+  <description>ToroboArm with Gripper URDF description</description>
+
+  <maintainer email="koji1989@gmail.com">vivitter</maintainer>
+  <author email="koji1989@gmail.com">vivitter</author>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <run_depend>xacro</run_depend>
+</package>

@@ -8,6 +8,12 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS})
+find_package(PkgConfig)
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
+add_definitions(${EIGEN_DEFINITIONS})
+
+include_directories(include)
+include_directories(${catkin_INCLUDE_DIRS})
 
 add_library(${PROJECT_NAME} src/GMR.cpp)

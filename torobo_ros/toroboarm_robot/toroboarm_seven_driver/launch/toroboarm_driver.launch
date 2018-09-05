@@ -1,0 +1,6 @@
+<launch>
+  <node name="joint_state_publisher" ns="toroboarm" pkg="toroboarm_seven_driver"
+    type="joint_state_publisher.py" args="--test" respawn="true"/>
+  <node name="command_sender" ns="toroboarm" pkg="toroboarm_seven_driver"
+    type="command_sender.py" args="--test" respawn="true" output="screen" />
+</launch>

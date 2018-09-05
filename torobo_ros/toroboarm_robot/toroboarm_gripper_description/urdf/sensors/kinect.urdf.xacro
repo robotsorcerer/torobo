@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<robot name="sensor_kinect" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find toroboarm_gripper_description)/urdf/toroboarm_gripper_properties.urdf.xacro"/>
+
+  <xacro:property name="kinect_cam_py" value="-0.0125"/>
+  <!-- Parameterised in part by the values in toroboarm_gripper_properties.urdf.xacro -->
+  <xacro:macro name="sensor_kinect" params="parent">
+    <joint name="rgbd_camera_joint" type="fixed">
+    <origin xyz="${cam_px} ${kinect_cam_py} ${cam_pz}" rpy="${cam_or} ${cam_op} ${cam_oy}"/>
+    <parent link="${parent}"/>
+    <child link="camera_link"/>
+    </joint>
+    <link name="camera_link">
+      <visual>
+       <origin xyz="0 0 0" rpy="0 0 ${M_PI/2}"/>
+        <geometry>
+         <mesh filename="package://toroboarm_gripper_description/meshes/sensors/kinect.dae"/>
+        </geometry>
+      </visual>
+  	  <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+  	    <geometry>
+  	      <box size="0.07271 0.27794 0.073"/>
+  	    </geometry>
+  	  </collision>
+      <inertial>
+        <mass value="0.564" />
+        <origin xyz="0 0 0" />
+        <inertia ixx="0.003881243" ixy="0.0" ixz="0.0"
+                 iyy="0.000498940" iyz="0.0"
+                 izz="0.003879257" />
+      </inertial>
+    </link>
+    <joint name="rgbd_camera_optical_joint" type="fixed">
+      <origin rpy="-1.57079632679 0 -1.57079632679" xyz="0 0 0"/>
+      <parent link="camera_link"/>
+      <child link="rgbd_camera_optical_frame"/>
+    </joint>
+    <link name="rgbd_camera_optical_frame">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0.001"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+    </link>
+    <!-- Depth sensor frames -->
+    <joint name="rgbd_camera_depth_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="0.0 0.049 0.0"/>
+      <parent link="camera_link"/>
+      <child link="rgbd_camera_depth_frame"/>
+    </joint>
+    <link name="rgbd_camera_depth_frame">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0.001"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+    </link>
+    <joint name="rgbd_camera_depth_optical_joint" type="fixed">
+      <origin rpy="-1.57079632679 0.0 -1.57079632679" xyz="0 0 0"/>
+      <parent link="rgbd_camera_depth_frame"/>
+      <child link="rgbd_camera_depth_optical_frame"/>
+    </joint>
+    <link name="rgbd_camera_depth_optical_frame">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0.001"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+    </link>
+    <!-- RGB sensor frames -->
+    <joint name="rgbd_camera_rgb_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="0.0 0.022 0.0"/>
+      <parent link="camera_link"/>
+      <child link="rgbd_camera_rgb_frame"/>
+    </joint>
+    <link name="rgbd_camera_rgb_frame">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0.001"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+    </link>
+    <joint name="rgbd_camera_rgb_optical_joint" type="fixed">
+      <origin rpy="-1.57079632679 0.0 -1.57079632679" xyz="0 0 0"/>
+      <parent link="rgbd_camera_rgb_frame"/>
+      <child link="rgbd_camera_rgb_optical_frame"/>
+    </joint>
+    <link name="rgbd_camera_rgb_optical_frame">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0.001"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+    </link>
+
+  	<!-- Kinect sensor for simulation -->
+  	<!-- <toroboarm_gripper_sim_3dsensor/> -->
+  </xacro:macro>
+</robot>

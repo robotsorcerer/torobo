@@ -1,0 +1,8 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: toroboarm_seven_description
+    relative_path: urdf/toroboarm.urdf.xacro
+  SRDF:
+    relative_path: config/toroboarm.srdf
+  CONFIG:
+    generated_timestamp: 1487328398

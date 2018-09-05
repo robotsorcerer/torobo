@@ -1,0 +1,20 @@
+<launch>
+
+  <!-- load the controllers -->
+  <rosparam file="$(find toroboarm_gripper_control)/config/toroboarm_gripper_control.yaml" command="load"/>
+
+  <!-- load the controllers -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+        output="screen" ns="toroboarm_gripper"
+        args="joint_state_controller
+              whole_arm_controller
+              gripper_controller"/>
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
+    <remap from="/joint_states" to="toroboarm_gripper/joint_states" />
+  </node>
+
+
+
+</launch>

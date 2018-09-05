@@ -15,6 +15,21 @@
 
   <run_depend>torobo_ik</run_depend>
   <run_depend>lyapunov_learner</run_depend>
+  <run_depend>toroboarm_gripper_bringup</run_depend>
+  <run_depend>toroboarm_gripper_bringup</run_depend>
+  <run_depend>toroboarm_gripper_control</run_depend>
+  <run_depend>toroboarm_gripper_description</run_depend>
+  <run_depend>toroboarm_gripper_driver</run_depend>
+  <run_depend>toroboarm_gripper_gazebo</run_depend>
+  <run_depend>toroboarm_gripper_moveit_config</run_depend>
+  <run_depend>toroboarm_gripper_pick_and_place</run_depend>
+  <run_depend>toroboarm_seven_bringup</run_depend>
+  <run_depend>toroboarm_seven_control</run_depend>
+  <run_depend>toroboarm_seven_description</run_depend>
+  <run_depend>toroboarm_seven_driver</run_depend>
+  <run_depend>toroboarm_seven_gazebo</run_depend>
+  <run_depend>toroboarm_seven_moveit_config</run_depend>
+  <run_depend>toroboarm_seven_robot</run_depend>
 
   <export>
     <metapackage/>
