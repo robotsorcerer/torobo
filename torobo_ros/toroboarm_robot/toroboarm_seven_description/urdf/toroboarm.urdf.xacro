@@ -5,7 +5,7 @@
   <xacro:include filename="$(find toroboarm_seven_description)/urdf/toroboarm.transmission.xacro"/>
 
   <!-- =============== Constants =============== -->
-  <property name="M_PI" value="3.1415926535897931"/>
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
 
   <!-- =============== Link & Joint =============== -->
   <!-- <link name="base_link"/> -->

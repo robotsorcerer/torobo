@@ -6,7 +6,7 @@
   <xacro:include filename="$(find toroboarm_gripper_description)/urdf/sensors/kinect.urdf.xacro"/>
 
   <!-- =============== Constants =============== -->
-  <property name="M_PI" value="3.1415926535897931"/>
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
   <material name="White">
     <color rgba="1.0 1.0 1.0 1.0"/>
   </material>
